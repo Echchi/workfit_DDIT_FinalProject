@@ -1,0 +1,97 @@
+@charset "UTF-8";
+
+.widget {
+	background: rgba(255, 255, 255, 0.5);
+}
+
+.slide-top {
+	animation: slide-top 0.9s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
+}
+
+@keyframes slide-top { 
+	0%		{ transform: translateY(130px);}
+	100% 	{ transform: translateY(0); }
+}
+.slide-bottom {
+	animation: slide-bottom 0.9s cubic-bezier(0.215, 0.610, 0.355, 1.000)
+		both;
+}
+
+@keyframes slide-bottom { 
+	0% 		{transform: translateY(0px);}
+	100%	{transform:translateY(160px);}
+}
+.DashDelBtn {
+	width: 30px !important;
+	height: 30px;
+	border-radius: 50%;
+	background-color: rgba(255, 255, 255);
+	border: none;
+	position: absolute;
+	top: -10px;
+	left: -10px;
+	opacity: 0.9;
+}
+
+.detailIcon{
+	position: absolute; top : 22px; right: 28px; font-size: 25px; cursor: pointer;
+}
+
+.fadein {
+	animation: fadein 0.9s;
+}
+
+@keyframes fadein {
+	from { opacity:0;}
+	to {opacity: 0.9;}
+}
+.fadeout {
+	animation: fadeout 0.9s;
+}
+
+@keyframes fadeout {
+	from { opacity:1;}
+	to { opacity: 0;}
+}
+.hide {
+	display: none;
+}
+
+.duldul {
+	animation: move 0.3s cubic-bezier(0.250, 0.460, 0.450, 0.940) both
+		infinite;
+}
+
+.shakshak {
+	animation: rotate 0.35s cubic-bezier(0.250, 0.460, 0.450, 0.940) both
+		infinite;
+}
+
+@keyframes move { 
+	0% {transform: rotate(0);}
+	25%{transform:translate(0.7px);}
+	50%{transform:translate(0px);}
+	75%{transform:translate(-1px);}
+	100%{transform:translate(0px);}
+}
+@keyframes rotate { 
+	0% {transform: rotate(0deg);}
+	25%{transform:rotate(-1deg);}
+	50%{transform:rotate(0deg);}
+	75%{transform:rotate(0.9deg);}
+	100%{transform:rotate(0);}
+}
+
+#widgetList {
+	margin-left: 0px !important;
+}
+
+#widgetList img {
+	filter: drop-shadow(0px 0px 7px #5c5c5c);
+}
+
+#widgetList div:hover {
+	border-radius: 10px;
+	background-color: rgb(247, 248, 250);
+}
+

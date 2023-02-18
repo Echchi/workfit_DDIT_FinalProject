@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.document.DocumentMapper">
+	<!-- ========================================================================== -->
+	<!--                              Dynamic Query                                 -->
+	<!-- ========================================================================== -->
+	<sql id="myDocSearch">
+		<if test="searchType != null and searchType == 'fileName'">
+			and (my_doc_name like '%'||#{searchWord}||'%')
+		</if>
+		<if test="searchType != null and searchType == 'fileType'">
+			and (my_doc_type like '%'||#{searchWord}||'%')
+		</if>
+		<if test="searchType == null and searchWord == null and searchBtn != null">
+			and (my_doc_type like '%'||#{searchBtn}||'%')
+		</if>
+	</sql>
+	<!-- 쿼리 줄이는 건 나중에 차차 생각해보자. -->
+	<sql id="deptDocSearch">
+		<if test="searchType != null and searchType == 'fileName'">
+			and (dept_doc_name like '%'||#{searchWord}||'%')
+		</if>
+		<if test="searchType != null and searchType == 'fileType'">
+			and (dept_doc_type like '%'||#{searchWord}||'%')
+		</if>
+	</sql>
+	<!-- ========================================================================== -->
+	<!-- ResultMap Settings  For Selecting with Uploading FileInfo contains MemInfo -->
+	<!-- ========================================================================== -->
+	<resultMap type="myDocVO" id="mydocMap">
+			<id property="myDocCode" column="MY_DOC_CODE"/>
+			<result property="myDocCode" column="my_doc_code"/>
+			<result property="docCode" column="doc_code"/>
+			<result property="myDocName" column="my_doc_name"/>
+			<result property="myDocNewname" column="my_doc_newname"/>
+			<result property="myDocPath" column="my_doc_path"/>
+			<result property="myDocType" column="my_doc_type"/>
+			<result property="myDocDate" column="my_doc_date"/>
+			<result property="myDocSize" column="my_doc_size"/>
+			<result property="docCode" column="doc_code"/>
+			<result property="memId" column="mem_id"/>
+			<result property="deptCode" column="dept_code"/>
+		<!-- 1:1 Associated -->
+<!-- 		 <association property="docVO" javaType="docVO"> -->
+<!-- 			<id property="docCode" column="doc_code"/> -->
+<!-- 	    </association> -->
+	</resultMap>
+	
+	<resultMap type="deptDocVO" id="deptdocMap">
+			<id property="deptDocCode" column="dept_doc_code"/>
+			<result property="deptDocCode" column="dept_doc_code"/>
+			<result property="docCode" column="doc_code"/>
+			<result property="deptDocName" column="dept_doc_name"/>
+			<result property="deptDocNewname" column="dept_doc_newname"/>
+			<result property="deptDocPath" column="dept_doc_path"/>
+			<result property="deptDocType" column="dept_doc_type"/>
+			<result property="deptDocDate" column="dept_doc_date"/>
+			<result property="deptDocSize" column="dept_doc_size"/>
+			<result property="docCode" column="doc_code"/>
+			<result property="memId" column="mem_id"/>
+			<result property="deptCode" column="dept_code"/>
+			
+<!-- 		 <association property="docVO" javaType="docVO"> -->
+<!-- 			<id property="docCode" column="doc_code"/> -->
+<!-- 	    </association> -->
+	</resultMap>
+	<!-- ========================================================================== -->
+	<!--                              ResultMap End                                 -->
+	<!-- ========================================================================== -->
+	
+	<!-- ========================================================================== -->
+	<!--                              Valid DocCode                                 -->
+	<!-- ========================================================================== -->
+	<select id="checkCreatedDocCode" parameterType="hashMap" resultType="int">
+		select count(*)
+		from doc
+		where 
+		MEM_ID = #{memId}
+		and
+		DEPT_CODE = #{deptCode}
+	</select>
+
+	<insert id="createDocCodeDefault" parameterType="hashMap">
+		<selectKey keyProperty="docCode" order="BEFORE" resultType="string">
+			select seq_doc.nextval from dual
+		</selectKey>
+		insert into doc(DOC_CODE, MEM_ID, DEPT_CODE)
+		values ('dc'||LPAD(#{docCode},3,'0'),#{memId},#{deptCode})
+	</insert>
+
+	<select id="getDocCode" parameterType="hashMap" resultType="string">
+		select DOC_CODE
+		from DOC
+		where
+		MEM_ID = #{memId}
+		and 
+		DEPT_CODE = #{deptCode}
+	</select>
+	
+	<!-- ========================================================================== -->
+	<!--                              Valid DocCode End                             -->
+	<!-- ========================================================================== -->
+	
+	<!-- ========================================================================== -->
+	<!--                              File Usage Get                                -->
+	<!-- ========================================================================== -->
+	<select id="getCoStorage" parameterType="hashmap" resultType="long">
+	 	select co_storage_size
+        from co
+        where co_code = #{coCode}
+	</select>
+	
+	<select id="getMyDocUsage" parameterType="hashmap" resultType="map">
+		select 
+		nvl(my_doc_type,'total') fileType,
+		nvl(sum(my_doc_size),0) fileTypeSize , 
+		count(*) countFile
+        from my_doc
+        where doc_code = (select doc_code from doc where mem_id = #{memId} and dept_code= #{deptCode})
+<!--         and MY_DOC_TYPE like '%pdf%' -->
+        group by rollup(my_doc_type)
+	</select>
+	
+	<select id="getDeptDocUsage" parameterType="hashmap" resultType="map">
+		select 
+		nvl(dept_doc_type,'total') fileType,
+		nvl(sum(dept_doc_size),0) fileTypeSize , 
+		count(*) countFile
+        from dept_doc
+        where doc_code = (select doc_code from doc where mem_id = #{memId} and dept_code= #{deptCode})
+<!--         and MY_DOC_TYPE like '%pdf%' -->
+        group by rollup(dept_doc_type)
+	</select>
+	
+	<!-- ========================================================================== -->
+	<!--                              List Doc Query                                -->
+	<!-- ========================================================================== -->
+	<select id="ListMyDoc" parameterType="hashmap" resultMap="mydocMap">
+	select a.MY_DOC_CODE, a.DOC_CODE, a.MY_DOC_NAME,a.MY_DOC_SIZE, a.MY_DOC_NEWNAME,
+	a.MY_DOC_PATH, a.MY_DOC_TYPE, a.MY_DOC_DATE,b.MEM_ID,b.DEPT_CODE
+	from doc b Join my_doc a
+	on b.DOC_CODE = a.DOC_CODE
+	where b.MEM_ID = #{memId}
+	<include refid="myDocSearch"></include>
+	order by 1
+	</select>
+	
+	<select id="ListDeptDoc" parameterType="hashmap" resultMap="deptdocMap">
+		select a.DEPT_DOC_CODE, a.DOC_CODE, a.DEPT_DOC_NAME,a.DEPT_DOC_SIZE, a.DEPT_DOC_NEWNAME,
+		a.DEPT_DOC_PATH, a.DEPT_DOC_TYPE, a.DEPT_DOC_DATE,b.MEM_ID,b.DEPT_CODE
+		from doc b Join dept_doc a
+		on b.DOC_CODE = a.DOC_CODE
+		where b.MEM_ID = #{memId}
+		and b.DEPT_CODE = #{deptCode}
+		<include refid="deptDocSearch"></include>
+		order by 1
+	</select>
+	
+	
+	<!-- ========================================================================== -->
+	<!--                              Save File Query                               -->
+	<!-- ========================================================================== -->
+	
+	<insert id="saveFile" parameterType="myDocVO">
+		<selectKey keyProperty="myDocCode" order="BEFORE" resultType="string"> 
+			SELECT LPAD(SEQ_MY_DOC.nextval,3,'0') FROM dual
+		</selectKey>
+		INSERT INTO MY_DOC
+		(MY_DOC_CODE, DOC_CODE, MY_DOC_NAME, MY_DOC_SIZE, MY_DOC_NEWNAME, MY_DOC_PATH, MY_DOC_TYPE, MY_DOC_DATE)
+		values	('md'||#{myDocCode},#{docCode},#{myDocName},#{myDocSize},#{myDocNewname},#{myDocPath},#{myDocType},sysdate)
+	</insert>
+	
+	<insert id="saveDeptfile" parameterType="deptDocVO">
+		<selectKey keyProperty="deptDocCode" order="BEFORE" resultType="string"> 
+			SELECT LPAD(SEQ_DEPT_DOC.nextval,3,'0') FROM dual
+		</selectKey>
+			INSERT INTO DEPT_DOC
+			(DEPT_DOC_CODE, DOC_CODE, DEPT_DOC_NAME, DEPT_DOC_SIZE, DEPT_DOC_NEWNAME, DEPT_DOC_PATH, DEPT_DOC_TYPE, DEPT_DOC_DATE)
+			values	
+			('dd'||#{deptDocCode},#{docCode},#{deptDocName},#{deptDocSize},#{deptDocNewname},#{deptDocPath},#{deptDocType},sysdate)
+	</insert>
+	<!-- ========================================================================== -->
+	<!-- ========================================================================== -->
+	
+	<!-- ========================================================================== -->
+	<!--                              Delete File Query                             -->
+	<!-- ========================================================================== -->
+	
+	<delete id="deleteMyDoc" parameterType="string">
+		delete from my_doc
+		 where my_doc_code = #{myDocCode}
+	</delete>
+	
+	<delete id="deleteDeptDoc" parameterType="string">
+		delete from dept_doc
+		 where dept_doc_code = #{deptDocCode}
+	</delete>
+	
+	
+	<!-- ========================================================================== -->
+	<!--                              Download File Query                           -->
+	<!-- ========================================================================== -->
+	
+	<select id="getFile" parameterType="string" resultType="myDocVO">
+		select * 
+		from my_doc
+		where 
+		my_doc_code = #{mdId}
+	</select>
+	
+	<select id="getDeptFile" parameterType="string" resultType="deptDocVO">
+		select * 
+		from dept_doc
+		where 
+		dept_doc_code = #{ddId}
+	</select>
+	<!-- ========================================================================== -->
+	<!-- ========================================================================== -->
+	
+	
+	
+	
+	<!-- ========================================================================== -->
+	<!--                              Test Code                                     -->
+	<!-- ========================================================================== -->
+	<select id="selectListMyDoc" resultType="myDocVO">
+		select * from my_doc
+	</select>
+
+	<select id="selectListDeptDoc" resultType="deptDocVO">
+		select * from dept_doc
+	</select>
+
+	<select id="selectListPublicDoc" resultType="publicDocVO">
+		select * from
+		public_doc
+	</select>
+
+	<select id="selectListFreqDoc" resultType="freqDocVO">
+		select * from freq_doc
+	</select>
+	
+	<!-- ========================================================================== -->
+	<!--                              Tested Code                                   -->
+	<!-- ========================================================================== -->
+	<select id="listFiles" resultType="myDocVO">
+		select my_doc_code, my_doc_name, my_doc_path, my_doc_size, my_doc_type from my_doc
+	</select>
+	
+	
+	
+	<insert id="insertMyDoc" parameterType="myDocVO">
+		insert into my_doc values
+		(#{myDocCode},#{docCode},#{myDocName},#{myDocSize},#{myDocNewname},#{myDocPath},#{myDocType},#{myDocDate})
+<!-- 		(#{myDocCode},#{docCode},#{myDocName},#{myDocSize},#{myDocNewname},#{myDocPath},#{myDocType},#{myDocDate}) -->
+	</insert>
+
+	<insert id="insertDeptDoc" parameterType="deptDocVO">
+		insert into dept_doc
+		values
+		(#{deptDocCode},#{docCode},#{deptDocName},#{deptDocSize},#{deptDocNewname},#{deptDocPath},#{deptDocType},#{deptDocDate})
+	</insert>
+
+	<insert id="insertPublicDoc" parameterType="publicDocVO">
+		insert into
+		public_doc values
+		(#{publicDocCode},#{coCode},#{publicDocName},#{publicDocSize},#{publicDocNewname},#{publicDocPath},#{publicDocType},#{publicDocDate})
+	</insert>
+
+	<insert id="insertFreqDoc" parameterType="freqDocVO">
+		insert into freq_doc
+		values
+		(#{freqDocCode},#{docCode},#{myDocCode},#{deptDocCode},#{freqDocBookmark})
+	</insert>
+
+
+
+</mapper>

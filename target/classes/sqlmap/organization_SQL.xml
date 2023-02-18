@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.organization.OrganizationMapper">
+
+<select id="getMemData" resultType="kr.or.workFit.vo.organizationhelper.TreeNode" parameterType="String">
+	SELECT DEPT_FK, MEM_ID, MEM_NAME,MEM_JOB_GRADE, MEM_PROFILE_URL FROM    
+	(SELECT DEPT_FK, MEM_ID, MEM_NAME, CO_CODE, MEM_PROFILE_URL, CASE 
+    WHEN MEM_JOB_GRADE = '사장' THEN '1'
+    WHEN MEM_JOB_GRADE = '부장' THEN '2'
+    WHEN MEM_JOB_GRADE = '팀장' THEN '3'
+    WHEN MEM_JOB_GRADE = '과장' THEN '3'
+    WHEN MEM_JOB_GRADE = '대리' THEN '4'
+    ELSE '5' END AS MEM_LV, MEM_JOB_GRADE
+    FROM MEMBER WHERE USAGE_STATUS = '0')
+    WHERE CO_CODE = #{coCode}
+    ORDER BY MEM_LV
+</select>
+
+<select id="getDeptData" resultType="kr.or.workFit.vo.organizationhelper.TreeNode" parameterType="String">
+	SELECT DEPT_CODE, CO_CODE, DEPT_NAME, DEPT_DIRECT
+    FROM DEPT
+    WHERE CO_CODE = #{coCode} AND DEPT_NAME != '미배정'
+    START WITH DEPT_DIRECT IS NULL
+    CONNECT BY DEPT_DIRECT = PRIOR DEPT_CODE
+</select>
+
+<select id="getAllDeptData" resultType="deptVO" parameterType="String">
+	SELECT DEPT_CODE, CO_CODE, DEPT_NAME, DEPT_DIRECT
+    FROM DEPT
+    WHERE CO_CODE = #{coCode}
+    START WITH DEPT_DIRECT IS NULL
+    CONNECT BY DEPT_DIRECT = PRIOR DEPT_CODE
+</select>
+
+
+<select id="getMemDetail" parameterType="String" resultType="memberVO">
+	SELECT * FROM MEMBER
+	WHERE MEM_ID = #{memId}
+</select>
+
+<select id="selectOneDeptName" parameterType="String" resultType="String">
+	SELECT DEPT_NAME FROM DEPT
+	WHERE DEPT_CODE = #{deptFk}
+</select>
+
+<select id="getDeptAssignedMember" parameterType="kr.or.workFit.vo.organizationhelper.TreeNode" resultType="kr.or.workFit.vo.organizationhelper.TreeNode">
+	SELECT MEM_ID, MEM_NAME, MEM_JOB_GRADE, MEM_EMAIL, CASE 
+    WHEN MEM_JOB_GRADE = '사장' THEN '1'
+    WHEN MEM_JOB_GRADE = '부장' THEN '2'
+    WHEN MEM_JOB_GRADE = '팀장' THEN '3'
+    WHEN MEM_JOB_GRADE = '과장' THEN '3'
+    WHEN MEM_JOB_GRADE = '대리' THEN '4'
+    ELSE '5' END AS MEM_LV, DEPT_NAME FROM 
+(SELECT DEPT_CODE, CO_CODE, DEPT_NAME, DEPT_DIRECT
+    FROM DEPT
+    WHERE CO_CODE = #{coCode}
+    START WITH DEPT_DIRECT = #{deptCode}
+    CONNECT BY DEPT_DIRECT = PRIOR DEPT_CODE
+    UNION
+SELECT DEPT_CODE, CO_CODE, DEPT_NAME, DEPT_DIRECT
+    FROM DEPT
+    WHERE CO_CODE = #{coCode} AND DEPT_CODE = #{deptCode}) A, MEMBER B
+    WHERE A.DEPT_CODE = B.DEPT_FK AND B.USAGE_STATUS = '0' ORDER BY DEPT_NAME,MEM_LV
+
+</select>
+
+<select id="getnoneAssignDept" parameterType="String" resultType="kr.or.workFit.vo.organizationhelper.TreeNode">
+	SELECT DEPT_CODE, CO_CODE, DEPT_NAME, DEPT_DIRECT FROM DEPT WHERE CO_CODE = #{coCode} AND DEPT_NAME = '미배정'
+</select>
+
+</mapper>

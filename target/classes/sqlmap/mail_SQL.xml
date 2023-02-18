@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.mail.MailMapper">
+	
+	<insert id="insertMail" parameterType="emailVO">
+		INSERT INTO EMAIL VALUES('email'||SEQ_EMAIL.NEXTVAL,#{memId},#{emailTitle}, #{emailContent},SYSDATE,#{emailStatus})
+		<selectKey resultType="String" keyProperty="iq" order="AFTER">
+        	SELECT 'email'||SEQ_EMAIL.CURRVAL FROM DUAL
+    	</selectKey>     
+	</insert>
+
+	<insert id="insertEmailTarget" parameterType="emailTargetVO">
+		INSERT INTO EMAIL_TARGET VALUES('emailtarget'||SEQ_EMAIL_TARGET.NEXTVAL,#{emailCode},#{memId},#{targetStatus},'0','0',#{emailStatus})
+	</insert>
+
+<!-- 보낸 메일함을 조회할 때 나타날 리스트들을 조회하게 해주는 쿼리문  -->
+	<select id="selectSendMailList" resultType="emailVO" parameterType="memberVO">
+		SELECT A.*, B.MEM_NAME FROM 
+		(SELECT * FROM EMAIL WHERE MEM_ID = #{memId} AND (EMAIL_STATUS = '0' OR EMAIL_STATUS = '2')) A, (SELECT * FROM MEMBER WHERE USAGE_STATUS = '0') B
+		WHERE A.MEM_ID = B.MEM_ID
+		ORDER BY EMAIL_DATE DESC
+	</select>
+	
+<!-- 받은 메일함 -->
+	<select id="selectReceiveMailList" resultType="emailVO" parameterType="memberVO">
+		SELECT C.*, D.MEM_NAME FROM
+         (SELECT B.EMAIL_CODE, B.MEM_ID, B.EMAIL_TITLE, B.EMAIL_DATE, B.EMAIL_STATUS, A.EMAIL_READ_STATUS, A.DELETE_STATUS, A.EMAIL_STATUS AS RECEIVER_EMAIL_STATUS
+		FROM (SELECT EMAIL_CODE, EMAIL_READ_STATUS, DELETE_STATUS,EMAIL_STATUS FROM EMAIL_TARGET WHERE MEM_ID = #{memId} AND (EMAIL_STATUS = '2' OR EMAIL_STATUS = '0')) A, (SELECT * FROM EMAIL) B 
+		WHERE B.EMAIL_CODE = A.EMAIL_CODE) C, MEMBER D
+        WHERE C.MEM_ID = D.MEM_ID AND C.DELETE_STATUS != 1
+        ORDER BY EMAIL_DATE DESC
+	</select>
+<!-- 중요 메일함 (내가 받은 메일 중 중요한 메일들을 리스토로 뽑음) -->		
+	<select id="selectReceiveImportantMailList" resultType="emailVO" parameterType="memberVO">
+		SELECT C.*, D.MEM_NAME FROM
+         (SELECT B.EMAIL_CODE, B.MEM_ID, B.EMAIL_TITLE, B.EMAIL_DATE, B.EMAIL_STATUS, A.EMAIL_READ_STATUS, A.DELETE_STATUS, A.EMAIL_STATUS AS RECEIVER_EMAIL_STATUS
+		FROM (SELECT EMAIL_CODE, EMAIL_READ_STATUS, DELETE_STATUS,EMAIL_STATUS FROM EMAIL_TARGET) A, (SELECT * FROM EMAIL WHERE MEM_ID = #{memId} AND EMAIL_STATUS = '2') B 
+		WHERE B.EMAIL_CODE = A.EMAIL_CODE
+        UNION
+        SELECT B.EMAIL_CODE, B.MEM_ID, B.EMAIL_TITLE, B.EMAIL_DATE, B.EMAIL_STATUS, A.EMAIL_READ_STATUS, A.DELETE_STATUS, A.EMAIL_STATUS AS RECEIVER_EMAIL_STATUS
+		FROM (SELECT EMAIL_CODE, EMAIL_READ_STATUS, DELETE_STATUS,EMAIL_STATUS FROM EMAIL_TARGET WHERE MEM_ID = #{memId} and email_status = '2') A, (SELECT * FROM EMAIL) B 
+		WHERE B.EMAIL_CODE = A.EMAIL_CODE) C, MEMBER D
+        WHERE C.MEM_ID = D.MEM_ID
+        ORDER BY EMAIL_DATE DESC
+	</select>
+	
+<!-- 임시 메일함 (내가 보낸 메일 중 임시저장한 메일들을 리스트로 뽑음) -->
+	<select id="selectTempMailList" resultType="emailVO" parameterType="memberVO">
+		SELECT A.*, B.MEM_NAME FROM 
+		(SELECT * FROM EMAIL WHERE MEM_ID = #{memId} AND (EMAIL_STATUS = '1')) A, (SELECT * FROM MEMBER WHERE USAGE_STATUS = '0') B 
+		WHERE A.MEM_ID = B.MEM_ID
+		ORDER BY EMAIL_DATE DESC
+	</select>
+
+<!-- 휴지통에서 메일을 리스트 형식으로 조회 -->
+	<select id="selectTrashMailList" resultType="emailVO" parameterType="memberVO">
+		SELECT C.*, D.MEM_NAME FROM
+		(SELECT DISTINCT B.EMAIL_CODE, B.MEM_ID, B.EMAIL_TITLE, B.EMAIL_DATE, B.EMAIL_STATUS, A.EMAIL_READ_STATUS, A.DELETE_STATUS, A.EMAIL_STATUS AS RECEIVER_EMAIL_STATUS 
+		FROM EMAIL B, EMAIL_TARGET A
+		WHERE B.EMAIL_CODE = A.EMAIL_CODE
+		AND ( (B.MEM_ID = #{memId} AND B.EMAIL_STATUS = '3') OR (A.MEM_ID = #{memId} AND A.DELETE_STATUS = '1') )) C, (SELECT * FROM MEMBER WHERE USAGE_STATUS = '0') D 
+        WHERE C.MEM_ID = D.MEM_ID
+        ORDER BY EMAIL_DATE DESC
+	</select>
+	
+<!-- 이메일을 작성한 회원에 대한 row하나 꺼내기  -->
+	<select id="selectMemData" resultType="memberVO" parameterType="String">
+		SELECT MEM_ID, MEM_NAME, MEM_EN_NAME, MEM_PASS, MEM_SECPASS, MEM_DEPT_TEL, MEM_TEL, MEM_INTRO, MEM_EMAIL, MEM_BIRTH, MEM_JOB_GRADE, CO_CODE, DEPT_FK,MEM_PROFILE_URL FROM MEMBER WHERE MEM_ID = #{memId}
+	</select>
+<!-- 이메일에 대한 데이터 row하나 꺼내기 -->	
+	<select id="selectEmailData" resultType="emailVO" parameterType="String">
+		SELECT * FROM EMAIL WHERE EMAIL_CODE = #{emailCode}
+	</select>
+<!-- 이메일을 받은 사람들에 대한 데이터 rows들 꺼내기  -->	
+	<select id="selectEmailTargetDatas" resultType="emailTargetVO" parameterType="String">
+		SELECT A.EMAIL_TARGET_CODE, A.EMAIL_CODE, A.MEM_ID, A.TARGET_STATUS, A.DELETE_STATUS, A.EMAIL_STATUS, B.MEM_EMAIL, B.MEM_NAME, B.MEM_EMAIL FROM EMAIL_TARGET A, MEMBER B 
+		WHERE A.MEM_ID = B.MEM_ID 
+		AND EMAIL_CODE = #{emailCode}
+	</select>
+	
+	<update id="updateMail" parameterType="emailVO">
+		UPDATE EMAIL 
+		SET EMAIL_TITLE = #{emailTitle},
+		    EMAIL_CONTENT = #{emailContent}
+		WHERE EMAIL_CODE = #{emailCode}
+	</update >
+	
+	
+	<!-- (받은 메일함에서)이메일을 삭제했을 때 실행되어야할 업데이트 쿼리문 -->
+	<update id="deleteMailAtReceived" parameterType="emailTargetVO">
+		UPDATE EMAIL_TARGET 
+		SET DELETE_STATUS = '1'
+		WHERE EMAIL_CODE = #{emailCode} AND MEM_ID = #{memId}
+	</update>
+	
+	<!-- (보낸 메일함에서)이메일을 삭제했을 때 실행되어야할 업데이트 쿼리문 -->
+	<update id="deleteMailAtSended" parameterType="emailTargetVO">
+		UPDATE EMAIL 
+		SET EMAIL_STATUS = '3'
+		WHERE EMAIL_CODE = #{emailCode} AND MEM_ID = #{memId}
+	</update>
+	
+	<update id="updateMailAtSended" parameterType="emailTargetVO">
+		UPDATE EMAIL
+		SET EMAIL_STATUS = #{emailStatus}
+		WHERE EMAIL_CODE = #{emailCode} AND MEM_ID = #{memId}
+	</update>
+	
+	<update id="updateMailAtReceived" parameterType="emailTargetVO">
+		UPDATE EMAIL_TARGET
+		SET EMAIL_STATUS = #{emailStatus}
+		WHERE EMAIL_CODE = #{emailCode} AND MEM_ID = #{memId}
+	
+	</update>
+		
+	
+	
+	<delete id="deleteTargetDatas" parameterType="emailVO">
+		DELETE FROM EMAIL_TARGET
+		WHERE EMAIL_CODE = #{emailCode}
+	</delete>
+	
+	<insert id="insertAttachFile" parameterType="emailAttachVO">
+		INSERT INTO EMAIL_ATTACH (EMAIL_ATTACH_CODE, EMAIL_CODE, EMAIL_ATTACH_NAME, EMAIL_ATTACH_SAVENAME,EMAIL_ATTACH_PATH,EMAIL_ATTACH_TYPE,EMAIL_ATTACH_SIZE,EMAIL_IMG_PATH) VALUES('EMATTACH'||SEQ_EMAIL_ATTACH.NEXTVAL, #{emailCode}, #{emailAttachName}, #{emailAttachSavename}, #{emailAttachPath}, #{emailAttachType}, #{emailAttachSize},null)
+	</insert>
+	
+	<insert id="insertAttachFileIncludeImg" parameterType="emailAttachVO">
+		INSERT INTO EMAIL_ATTACH (EMAIL_ATTACH_CODE, EMAIL_CODE, EMAIL_ATTACH_NAME, EMAIL_ATTACH_SAVENAME,EMAIL_ATTACH_PATH,EMAIL_ATTACH_TYPE,EMAIL_ATTACH_SIZE,EMAIL_IMG_PATH) VALUES('EMATTACH'||SEQ_EMAIL_ATTACH.NEXTVAL, #{emailCode}, #{emailAttachName}, #{emailAttachSavename}, #{emailAttachPath}, #{emailAttachType}, #{emailAttachSize},#{emailImgPath})
+	</insert>
+	
+	
+	<select id="selectMailAttachFile" parameterType="String" resultType="emailAttachVO">
+		SELECT * FROM EMAIL_ATTACH WHERE EMAIL_CODE = #{emailCode}
+	</select>
+	
+	<select id="getFile" parameterType="String" resultType="emailAttachVO">
+		SELECT * FROM EMAIL_ATTACH WHERE EMAIL_ATTACH_CODE = #{emailAttachCode}
+	</select>
+	
+	<select id="getOneImgAttachFile" parameterType="String" resultType="emailAttachVO">
+		SELECT * FROM EMAIL_ATTACH WHERE EMAIL_ATTACH_CODE = #{emailAttachCode}
+	</select>
+</mapper>

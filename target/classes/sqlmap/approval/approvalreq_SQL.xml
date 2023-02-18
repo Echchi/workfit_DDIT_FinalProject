@@ -1,0 +1,543 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.approval.ApprovalReqMapper">
+
+
+	<!-- 결재대기 -->
+	<select id="getRequested" parameterType="string" resultType="map">
+ 			select 
+			    a.approval_doc_code as approval_doc_code,
+			    a.approval_code as approval_code,
+			    e.approval_doc_title as approval_title,
+			    d.mem_name as mem_name,
+			    NVL(a.comment_count,0) as comment_count , 
+			    NVL(b.attach_count,0) as attach_count,
+			    NVL(c.bookmark_flag, 0) as bookmark_flag,
+			    d.approval_date as approval_date
+			 from ( select a.approval_doc_code as approval_doc_code,
+			        b.approval_code as approval_code,
+			        b.mem_name as mem_name,
+			        c.comment_count as comment_count   
+	 				from (select approval_flag, approval_doc_code from approval 
+			 where mem_id = #{memId}
+			 and approval_status = 0) a, APPROVAL b, (
+			 select count(approval_comment) as comment_count, approval_doc_code from approval 
+			 group by approval_doc_code) c
+			 where a.approval_doc_code = b.approval_doc_code
+			 and (a.approval_flag-1) = b.approval_flag
+			 and b.approval_status = 1
+			 and c.approval_doc_code = a.approval_doc_code) a
+			 left outer join ( select count(*) as attach_count, approval_doc_code from approval_attach 
+			 group by approval_doc_code) b
+			 on(a.approval_doc_code = b.approval_doc_code)
+			 left outer join (select count(*) as bookmark_flag, approval_doc_code  from approval_bookmark where mem_id=#{memId}
+			 group by approval_doc_code) c
+			 on(a.approval_doc_code = c.approval_doc_code)
+			 left outer join (select approval_date, mem_name, approval_doc_code from approval where approval_flag = 1) d
+			 on(a.approval_doc_code = d.approval_doc_code)
+			 left outer join (select * from approval_doc) e
+			 on(a.approval_doc_code = e.approval_doc_code)
+			 order by approval_date desc
+	</select>
+
+	<select id="getProcessing" parameterType="String" resultType="map">
+		select f.approval_doc_code,
+       f.approval_doc_title as approval_title,
+       f.mem_id,
+       f.approval_date,
+       f.comment_count,
+       f.mem_name,
+       f.attach_count,
+       count(g.approval_bookmark_code) as bookmark_flag
+       from(select a.approval_doc_code, 
+                   a.approval_doc_title,
+                   b.mem_id,
+                   b.approval_date,
+                   c.comment_count,
+                   d.mem_name,
+                   count(e.approval_attach_code) as attach_count
+                from approval_doc a,
+                     approval b,
+                        (select approval_doc_code, 
+                         count(approval_comment) as comment_count 
+                         from approval 
+                         where approval_doc_code in(select approval_doc_code from approval where mem_id = #{memId})
+                         group by approval_doc_code)c,
+                     member d,
+                     approval_attach e
+                where a.approval_doc_code = b. approval_doc_code
+                  and b.approval_doc_code = c. approval_doc_code
+                  and b.mem_id = d.mem_id
+                  and e.approval_doc_code(+) = a.approval_doc_code
+                  and b.approval_flag = 1
+                  and a.approval_doc_status = any(1,3)
+                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+            (select * from approval_bookmark where mem_id = #{memId}) g
+            where g.approval_doc_code(+) = f.approval_doc_code
+            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+            order by approval_date desc
+	</select>
+
+	
+	<select id="getProcessed" parameterType="String" resultType="map">
+		select f.approval_doc_code,
+       f.approval_doc_title as approval_title,
+       f.mem_id,
+       f.approval_date,
+       f.comment_count,
+       f.mem_name,
+       f.attach_count,
+       count(g.approval_bookmark_code) as bookmark_flag
+       from(select a.approval_doc_code, 
+                   a.approval_doc_title,
+                   b.mem_id,
+                   b.approval_date,
+                   c.comment_count,
+                   d.mem_name,
+                   count(e.approval_attach_code) as attach_count
+                from approval_doc a,
+                     approval b,
+                        (select approval_doc_code, 
+                         count(approval_comment) as comment_count 
+                         from approval 
+                         where approval_doc_code in(select approval_doc_code from approval where mem_id = #{memId})
+                         group by approval_doc_code)c,
+                     member d,
+                     approval_attach e
+                where a.approval_doc_code = b. approval_doc_code
+                  and b.approval_doc_code = c. approval_doc_code
+                  and b.mem_id = d.mem_id
+                  and e.approval_doc_code(+) = a.approval_doc_code
+                  and b.approval_flag = 1
+                  and a.approval_doc_status = 2
+                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+            (select * from approval_bookmark where mem_id = #{memId}) g
+            where g.approval_doc_code(+) = f.approval_doc_code
+            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+            order by approval_date desc
+	</select>
+	
+	<select id="getCanceled" parameterType="String" resultType="map">
+		select f.approval_doc_code,
+       f.approval_doc_title as approval_title,
+       f.mem_id,
+       f.approval_date,
+       f.comment_count,
+       f.mem_name,
+       f.attach_count,
+       count(g.approval_bookmark_code) as bookmark_flag
+       from(select a.approval_doc_code, 
+                   a.approval_doc_title,
+                   b.mem_id,
+                   b.approval_date,
+                   c.comment_count,
+                   d.mem_name,
+                   count(e.approval_attach_code) as attach_count
+                from approval_doc a,
+                     approval b,
+                        (select approval_doc_code, 
+                         count(approval_comment) as comment_count 
+                         from approval 
+                         where approval_doc_code in(select approval_doc_code from approval where mem_id = #{memId})
+                         group by approval_doc_code)c,
+                     member d,
+                     approval_attach e
+                where a.approval_doc_code = b. approval_doc_code
+                  and b.approval_doc_code = c. approval_doc_code
+                  and b.mem_id = d.mem_id
+                  and e.approval_doc_code(+) = a.approval_doc_code
+                  and b.approval_flag = 1
+                  and a.approval_doc_status = 4
+                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+            (select * from approval_bookmark where mem_id = #{memId}) g
+            where g.approval_doc_code(+) = f.approval_doc_code
+            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+            order by approval_date desc
+	</select>
+
+	<select id="getReference" parameterType="String" resultType="map">
+	select f.approval_doc_code,
+       f.approval_doc_title as approval_title,
+       f.mem_id,
+       f.approval_date,
+       f.comment_count,
+       f.mem_name,
+       f.attach_count,
+       count(g.approval_bookmark_code) as bookmark_flag
+       from(select a.approval_doc_code, 
+                   a.approval_doc_title,
+                   b.mem_id,
+                   b.approval_date,
+                   c.comment_count,
+                   d.mem_name,
+                   count(e.approval_attach_code) as attach_count
+                from approval_doc a,
+                     approval b,
+                        (select approval_doc_code, 
+                         count(approval_comment) as comment_count 
+                         from approval 
+                         where approval_doc_code in(select approval_doc_code from approval_reference where mem_id = #{memId})
+                         group by approval_doc_code)c,
+                     member d,
+                     approval_attach e
+                where a.approval_doc_code = b. approval_doc_code
+                  and b.approval_doc_code = c. approval_doc_code
+                  and b.mem_id = d.mem_id
+                  and e.approval_doc_code(+) = a.approval_doc_code
+                  and b.approval_flag = 1
+                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+            (select * from approval_bookmark where mem_id = #{memId}) g
+            where g.approval_doc_code(+) = f.approval_doc_code
+            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+            order by approval_date desc
+
+	</select>
+
+		<select id="getCountAppv" parameterType="string" resultType="int">
+ 			
+ 			select count(*)
+ 			from (
+		 			select 
+					    a.approval_doc_code as approval_doc_code,
+					    a.approval_code as approval_code,
+					    e.approval_doc_title as approval_title,
+					    a.mem_name as mem_name,
+					    NVL(a.comment_count,0) as comment_count , 
+					    NVL(b.attach_count,0) as attach_count,
+					    NVL(c.bookmark_flag, 0) as bookmark_flag,
+					    d.approval_date as approval_date
+					 from ( select a.approval_doc_code as approval_doc_code,
+					        b.approval_code as approval_code,
+					        b.mem_name as mem_name,
+					        c.comment_count as comment_count   
+			 				from (select approval_flag, approval_doc_code from approval 
+					 where mem_id = #{memId}
+					 and approval_status = 0) a, APPROVAL b, (
+					 select count(approval_comment) as comment_count, approval_doc_code from approval 
+					 group by approval_doc_code) c
+					 where a.approval_doc_code = b.approval_doc_code
+					 and (a.approval_flag-1) = b.approval_flag
+					 and b.approval_status = 1
+					 and c.approval_doc_code = a.approval_doc_code) a
+					 left outer join ( select count(*) as attach_count, approval_doc_code from approval_attach 
+					 group by approval_doc_code) b
+					 on(a.approval_doc_code = b.approval_doc_code)
+					 left outer join (select count(*) as bookmark_flag, approval_doc_code  from approval_bookmark where mem_id=#{memId}
+					 group by approval_doc_code) c
+					 on(a.approval_doc_code = c.approval_doc_code)
+					 left outer join (select approval_date, approval_doc_code from approval where approval_flag = 1) d
+					 on(a.approval_doc_code = d.approval_doc_code)
+					 left outer join (select * from approval_doc) e
+					 on(a.approval_doc_code = e.approval_doc_code)
+					 order by approval_date desc )
+	</select>
+
+	<select id="getProcessingCnt" parameterType="String" resultType="int">
+		select count(*) from(
+			select f.approval_doc_code,
+		       f.approval_doc_title as approval_title,
+		       f.mem_id,
+		       f.approval_date,
+		       f.comment_count,
+		       f.mem_name,
+		       f.attach_count,
+		       count(g.approval_bookmark_code) as bookmark_flag
+		       from(select a.approval_doc_code, 
+		                   a.approval_doc_title,
+		                   b.mem_id,
+		                   b.approval_date,
+		                   c.comment_count,
+		                   d.mem_name,
+		                   count(e.approval_attach_code) as attach_count
+		                from approval_doc a,
+		                     approval b,
+		                        (select approval_doc_code, 
+		                         count(approval_comment) as comment_count 
+		                         from approval 
+		                         where approval_doc_code in(select approval_doc_code from approval where mem_id = #{memId})
+		                         group by approval_doc_code)c,
+		                     member d,
+		                     approval_attach e
+		                where a.approval_doc_code = b. approval_doc_code
+		                  and b.approval_doc_code = c. approval_doc_code
+		                  and b.mem_id = d.mem_id
+		                  and e.approval_doc_code(+) = a.approval_doc_code
+		                  and b.approval_flag = 1
+		                  and a.approval_doc_status = any(1,3)
+		                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+		            (select * from approval_bookmark where mem_id = #{memId}) g
+		            where g.approval_doc_code(+) = f.approval_doc_code
+		            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+		            order by approval_date desc
+			)
+	
+	
+	</select>
+	<select id="getProcessedCnt" parameterType="String" resultType="int">
+		select count(*) from(
+					select f.approval_doc_code,
+       f.approval_doc_title as approval_title,
+       f.mem_id,
+       f.approval_date,
+       f.comment_count,
+       f.mem_name,
+       f.attach_count,
+       count(g.approval_bookmark_code) as bookmark_flag
+       from(select a.approval_doc_code, 
+                   a.approval_doc_title,
+                   b.mem_id,
+                   b.approval_date,
+                   c.comment_count,
+                   d.mem_name,
+                   count(e.approval_attach_code) as attach_count
+                from approval_doc a,
+                     approval b,
+                        (select approval_doc_code, 
+                         count(approval_comment) as comment_count 
+                         from approval 
+                         where approval_doc_code in(select approval_doc_code from approval where mem_id = #{memId})
+                         group by approval_doc_code)c,
+                     member d,
+                     approval_attach e
+                where a.approval_doc_code = b. approval_doc_code
+                  and b.approval_doc_code = c. approval_doc_code
+                  and b.mem_id = d.mem_id
+                  and e.approval_doc_code(+) = a.approval_doc_code
+                  and b.approval_flag = 1
+                  and a.approval_doc_status = 2
+                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+            (select * from approval_bookmark where mem_id = #{memId}) g
+            where g.approval_doc_code(+) = f.approval_doc_code
+            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+            order by approval_date desc
+		)
+	</select>
+	
+	
+	<select id="getReferenceCnt" parameterType="string" resultType="int">
+	
+	select count(*) from
+			(select f.approval_doc_code,
+		       f.approval_doc_title as approval_title,
+		       f.mem_id,
+		       f.approval_date,
+		       f.comment_count,
+		       f.mem_name,
+		       f.attach_count,
+		       count(g.approval_bookmark_code) as bookmark_flag
+		       from(select a.approval_doc_code, 
+		                   a.approval_doc_title,
+		                   b.mem_id,
+		                   b.approval_date,
+		                   c.comment_count,
+		                   d.mem_name,
+		                   count(e.approval_attach_code) as attach_count
+		                from approval_doc a,
+		                     approval b,
+		                        (select approval_doc_code, 
+		                         count(approval_comment) as comment_count 
+		                         from approval 
+		                         where approval_doc_code in(select approval_doc_code from approval_reference where mem_id = #{memId})
+		                         group by approval_doc_code)c,
+		                     member d,
+		                     approval_attach e
+		                where a.approval_doc_code = b. approval_doc_code
+		                  and b.approval_doc_code = c. approval_doc_code
+		                  and b.mem_id = d.mem_id
+		                  and e.approval_doc_code(+) = a.approval_doc_code
+		                  and b.approval_flag = 1
+		                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+		            (select * from approval_bookmark where mem_id = #{memId}) g
+		            where g.approval_doc_code(+) = f.approval_doc_code
+		            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+		            order by approval_date desc)
+	</select>
+	
+	<select id="getCanceledCnt" parameterType="string" resultType="int">
+		
+		select count(*) from(
+					select f.approval_doc_code,
+       f.approval_doc_title as approval_title,
+       f.mem_id,
+       f.approval_date,
+       f.comment_count,
+       f.mem_name,
+       f.attach_count,
+       count(g.approval_bookmark_code) as bookmark_flag
+       from(select a.approval_doc_code, 
+                   a.approval_doc_title,
+                   b.mem_id,
+                   b.approval_date,
+                   c.comment_count,
+                   d.mem_name,
+                   count(e.approval_attach_code) as attach_count
+                from approval_doc a,
+                     approval b,
+                        (select approval_doc_code, 
+                         count(approval_comment) as comment_count 
+                         from approval 
+                         where approval_doc_code in(select approval_doc_code from approval where mem_id = #{memId})
+                         group by approval_doc_code)c,
+                     member d,
+                     approval_attach e
+                where a.approval_doc_code = b. approval_doc_code
+                  and b.approval_doc_code = c. approval_doc_code
+                  and b.mem_id = d.mem_id
+                  and e.approval_doc_code(+) = a.approval_doc_code
+                  and b.approval_flag = 1
+                  and a.approval_doc_status = 4
+                  group by a.approval_doc_code, a.approval_doc_title, b.mem_id, d.mem_name, c.comment_count, b.approval_date)f,
+            (select * from approval_bookmark where mem_id = #{memId}) g
+            where g.approval_doc_code(+) = f.approval_doc_code
+            group by f.approval_doc_code, f.approval_doc_title, f.mem_id, f.mem_name, f.comment_count, f.approval_date, f.attach_count
+            order by approval_date desc
+		
+		
+		)
+		
+		
+	</select>
+	
+	
+	
+	
+	
+	
+	
+
+	<!--  회원 아이디로 이름 뽑는 sql -->
+	<select id="changeId2Nm" parameterType="String" resultType="String">
+		select mem_name from MEMBER where mem_id = #{memId}
+	</select>
+
+	<!-- 결재 테이블 정보 뽑는 sql -->
+	<select id="selectAppvContentList" parameterType="String" resultType="approvalVO">
+		select * from approval where approval_doc_code = #{approvalDocCode} order by APPROVAL_FLAG ASC
+	</select>
+	
+	<select id="selectAppvList" parameterType="String" resultType="approvalVO">
+		select * from approval where mem_id = #{memId}
+	</select>
+
+	<select id="selectAppv" parameterType="approvalVO" resultType="approvalVO">
+		select * from approval where mem_id = #{memId} and approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<select id="selectPreCheck" parameterType="String" resultType="int"> 
+	 select MAX(approval_flag) from approval where approval_status = 1 and approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<!-- 결재 참조 뽑는 sql -->
+	<select id="selectAppvRef" parameterType="String" resultType="approvalReferenceVO">
+		select * from approval_reference where approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<!--  참조자 뽑는 sql -->
+	<select id="selectAllMemforRef" resultType="memberVO" parameterType="String">
+		select * from member where mem_id not in (select mem_id from approval_reference where approval_doc_code=#{approvalDocCode})
+	</select>
+	
+	<!-- 결재 참조 리스트 뽑는 sql -->
+	<select id="selectRefList" resultType="String" parameterType="String">
+        select a.approval_doc_code
+        from approval_reference a
+        left outer join approval b
+        on (a.APPROVAL_DOC_CODE = b.APPROVAL_DOC_CODE and a.mem_id = b.mem_id)
+        where a.mem_id = #{memId}
+	</select>
+	
+	
+	<!-- 시퀀스 추가 필요 -->
+	<!--  참조자 추가 sql -->
+	<insert id="insertAppvRef" parameterType="approvalReferenceVO">
+		insert into APPROVAL_REFERENCE (APPROVAL_REFERENCE_CODE,APPROVAL_DOC_CODE,MEM_ID) values('AR'||SEQ_APPROVAL_REFERENCE.nextval,#{approvalDocCode},#{memId})
+	</insert>
+	
+	<!-- 결재문서 테이블 정보 뽑는 sql -->
+	<select id="selectAppvDoc" parameterType="String" resultType="approvalDocVO">
+		select * from approval_doc where approval_doc_code = #{approvalDocCode}
+	</select>
+
+	
+
+	<!-- 의견 개수 sql -->	
+	<select id="selectCommentCount" parameterType="String" resultType="int">
+		select count(approval_comment) from approval where approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<!-- 의견 추가 -->
+	<update id="updateAppvComment" parameterType="approvalVO">
+		update approval set APPROVAL_COMMENT = #{approvalComment} where MEM_ID = #{memId} and APPROVAL_DOC_CODE = #{approvalDocCode}
+	</update>	
+
+	<!--  첨부파일 sql -->
+	<select id="selectAttaches" parameterType="String" resultType="approvalAttachVO">
+		select * from APPROVAL_ATTACH where approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<select id="selectAttachCount" parameterType="String" resultType="int">
+		select count (*) from APPROVAL_ATTACH where approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	
+	
+	<!-- 작성자, 작성일 sql -->
+	<select id="selectAppvStart" parameterType="String" resultType="approvalVO">
+		select * from APPROVAL where approval_doc_code = #{approvalDocCode} and APPROVAL_FLAG = 1
+	</select>
+	
+	
+	<!-- 승인 -->
+	<!-- 최종 결재인지 아닌지 확인하는 sql -->
+	<select id="approvalFlagCheck" parameterType="String" resultType="int">
+		select max(rownum) from approval where APPROVAL_DOC_CODE = #{approvalDocCode}
+	</select>
+	
+	<!-- 문서승인 sql -->
+	<update id="updateMidApproval" parameterType="approvalVO">
+		update approval set APPROVAL_STATUS = '1', APPROVAL_DATE = sysdate where APPROVAL_DOC_CODE =#{approvalDocCode} and mem_id =#{memId}
+	</update>
+		
+	<!-- 최종승인 sql -->
+	<update id="updateFinalApproval" parameterType="String">
+		update approval_doc set APPROVAL_DOC_STATUS = '2' where APPROVAL_DOC_CODE =#{approvalDocCode}
+	</update>
+
+
+	<!-- 반려 -->
+	<update id="rejectApproval" parameterType="approvalVO">
+		update approval set APPROVAL_STATUS = '2', APPROVAL_DATE = sysdate where APPROVAL_DOC_CODE =#{approvalDocCode} and mem_id =#{memId}
+	</update>
+	
+	<!-- 해당 문서 반려 처리  -->
+	<update id="updateFinalRej" parameterType="String">
+		update approval_doc set APPROVAL_DOC_STATUS = '3' where APPROVAL_DOC_CODE =#{approvalDocCode}
+	</update>
+	
+	<!-- 첨부파일 추가 -->
+	<insert id="saveFile" parameterType="ApprovalAttachVO">
+	<selectKey keyProperty="reqAttCode" order="BEFORE" resultType="string"> 
+		SELECT LPAD(SEQ_APPROVAL_ATTACH.nextval,3,'0') FROM dual
+	</selectKey>
+		insert into APPROVAL_ATTACH(APPROVAL_ATTACH_CODE, APPROVAL_DOC_CODE, APPROVAL_ATTACH_NAME, APPROVAL_ATTACH_SIZE, APPROVAL_ATTACH_NEWNAME, APPROVAL_ATTACH_SAVEPATH, APPROVAL_ATTACH_TYPE, APPROVAL_ATTACH_DATE)
+		values	('AA'||#{reqAttCode},#{approvalDocCode},#{approvalAttachName},#{approvalAttachSize},#{approvalAttachNewname},#{approvalAttachSavepath},#{approvalAttachType},sysdate)
+	</insert>	
+	
+	
+	<!--  북마크 추가  -->
+	<insert id="insertBookMark" parameterType="approvalVO">
+		insert into APPROVAL_BOOKMARK (APPROVAL_BOOKMARK_CODE, MEM_ID, APPROVAL_DOC_CODE) values('BM'||SEQ_APPROVAL_BOOKMARK.nextval,#{memId},#{approvalDocCode})
+	</insert>
+	<!--  북마크 삭제  -->
+	<delete id="DelBookMark" parameterType="approvalVO">
+		delete from APPROVAL_BOOKMARK  where APPROVAL_DOC_CODE = #{approvalDocCode} and mem_id = #{memId}
+	</delete>
+	
+	
+	
+	
+	
+	
+	
+	
+</mapper>

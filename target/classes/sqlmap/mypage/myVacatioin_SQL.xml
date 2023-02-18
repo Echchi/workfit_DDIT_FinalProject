@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.mypage.VacationMapper">
+	<select id="vacationList" resultType="vacationTypeVO">
+		select * from vacation_type
+	</select>
+	
+	<insert id="insertVacation" parameterType="vacationVO">
+		insert into vacation 
+		values(seq_vacation.nextval, #{memIdFk}, #{vTypeFk}, #{vStart}, #{vEnd}, #{vReason} )
+	</insert>
+	
+	<select id="myVacationList" parameterType="map" resultType="vacationVO">
+		select a.*, b.vc_type from vacation a, vacation_type b
+		 where mem_id_fk = #{memId} 
+		   and a.v_type_fk = b.vct_code
+		   and a.v_start BETWEEN trunc(to_date(#{findTime}), 'MM')  AND 
+		       LAST_DAY(TO_DATE(#{findTime}, 'yyyy-MM-dd'))
+      order by a.v_start desc
+	</select>
+	
+	<delete id="deleteVacation" parameterType="String">
+		delete from vacation where v_code = #{code}
+	</delete>
+	
+	<select id="useVacationNum" parameterType="String" resultType="int">
+		select count(*) from vacation where mem_id_fk = #{memId} and v_type_fk like 'V' ||'%'
+	
+	</select>
+</mapper>

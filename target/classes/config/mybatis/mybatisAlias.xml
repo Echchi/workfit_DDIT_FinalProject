@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+<!-- 
+	[마이바티스] 스프링에서 '_'를 사용한 컬럼명을 사용시 (ex) BOOk 테이블의 BOOK_ID
+				 카멜 케이스로 읽어줌 (bookId)
+ -->
+	<settings>
+		<setting name="mapUnderscoreToCamelCase" value="true"/> 
+	  </settings>	
+	     <!--  자주 사용하는 타입의 별칭을 세팅 -->
+   <typeAliases>
+   		<!-- 변경 Log
+   			47 -> 60, Dayinfo.java는 유지 Alias만 dayInfoVO로 변경.
+   		 -->
+   		<!-- 수정하면 커밋 적어두고 추가하면 아래 개수 가감하여 적으시오. 양이 많으니 필요합니다. -->
+   		<!-- 추가 개수 확인용 : 60개 (2023-01-06)  -->
+   		<!-- A -->
+       <typeAlias type="kr.or.workFit.vo.AbsenceDelegationVO" alias="absenceDelegationVO"/>
+       <typeAlias type="kr.or.workFit.vo.ApprovalAttachVO" alias="approvalAttachVO"/>
+       <typeAlias type="kr.or.workFit.vo.ApprovalBookmarkVO" alias="approvalBookmarkVO"/>
+       <typeAlias type="kr.or.workFit.vo.ApprovalDocVO" alias="approvalDocVO"/>
+       <typeAlias type="kr.or.workFit.vo.ApprovalNotificationVO" alias="approvalNotificationVO"/>
+       
+       <typeAlias type="kr.or.workFit.vo.ApprovalReferenceVO" alias="approvalReferenceVO"/>
+       <typeAlias type="kr.or.workFit.vo.ApprovalTemplateVO" alias="approvalTemplateVO"/>
+       <typeAlias type="kr.or.workFit.vo.ApprovalVO" alias="approvalVO"/>
+       
+       <!-- B -->
+       <typeAlias type="kr.or.workFit.vo.BoardAttachVO" alias="boardAttachVO"/>
+       <typeAlias type="kr.or.workFit.vo.BoardReplyVO" alias="boardReplyVO"/>
+       <typeAlias type="kr.or.workFit.vo.BoardVO" alias="boardVO"/>
+       <typeAlias type="kr.or.workFit.vo.BusinessTripVO" alias="businessTripVO"/>
+       
+       <!-- C -->
+       <typeAlias type="kr.or.workFit.vo.CareerVO" alias="careerVO"/>
+       <typeAlias type="kr.or.workFit.vo.CertHistoryVO" alias="certHistoryVO"/>
+       <typeAlias type="kr.or.workFit.vo.CertListVO" alias="certListVO"/>
+       <typeAlias type="kr.or.workFit.vo.CertVO" alias="certVO"/>
+       <typeAlias type="kr.or.workFit.vo.ComplimentVO" alias="complimentVO"/>
+       
+       <typeAlias type="kr.or.workFit.vo.CoVO" alias="coVO"/>
+       <typeAlias type="kr.or.workFit.vo.ChatBotFAQVO" alias="chatBotFAQVO"/>
+       <typeAlias type="kr.or.workFit.vo.ChatBotVO" alias="chatBotVO"/>
+       
+       <!-- D -->
+       <typeAlias type="kr.or.workFit.vo.DashBoardListVO" alias="dashBoardListVO"/>
+       <typeAlias type="kr.or.workFit.vo.DashBoardVO" alias="dashBoardVO"/>
+       <typeAlias type="kr.or.workFit.vo.myworkhelper.DayInfo" alias="dayInfoVO"/>
+       <typeAlias type="kr.or.workFit.vo.DeceaseVO" alias="deceaseVO"/>
+       <typeAlias type="kr.or.workFit.vo.DeptCalendarVO" alias="deptCalendarVO"/>
+       
+       <typeAlias type="kr.or.workFit.vo.DeptDocVO" alias="deptDocVO"/>
+       <typeAlias type="kr.or.workFit.vo.DeptVO" alias="deptVO"/>
+       <typeAlias type="kr.or.workFit.vo.DocTemplateVO" alias="docTemplateVO"/>
+       <typeAlias type="kr.or.workFit.vo.DocVO" alias="docVO"/>
+       
+       <!-- E -->
+       <typeAlias type="kr.or.workFit.vo.EmailAttachVO" alias="emailAttachVO"/>
+       <typeAlias type="kr.or.workFit.vo.EmailTargetVO" alias="emailTargetVO"/>
+       <typeAlias type="kr.or.workFit.vo.EmailVO" alias="emailVO"/>
+       <typeAlias type="kr.or.workFit.vo.ErrorReportVO" alias="errorReportVO"/>
+       
+       <!-- F -->
+       <typeAlias type="kr.or.workFit.vo.FixtureVO" alias="fixtureVO"/>
+       <typeAlias type="kr.or.workFit.vo.FreqApprovalDetailVO" alias="freqApprovalDetailVO"/>
+       <typeAlias type="kr.or.workFit.vo.FreqApprovalVO" alias="freqApprovalVO"/>
+       <typeAlias type="kr.or.workFit.vo.FreqDocVO" alias="freqDocVO"/>
+       
+       <!-- L  M  N -->
+       <typeAlias type="kr.or.workFit.vo.LoginLogVO" alias="loginLogVO"/>
+       <typeAlias type="kr.or.workFit.vo.MemAuthVO" alias="memAuthVO"/>
+       <typeAlias type="kr.or.workFit.vo.MemberVO" alias="memberVO"/>
+       <typeAlias type="kr.or.workFit.vo.MemCalendarVO" alias="memCalendarVO"/>
+       <typeAlias type="kr.or.workFit.vo.MyDocVO" alias="myDocVO"/>
+       
+       <typeAlias type="kr.or.workFit.vo.NotificationVO" alias="notificationVO"/>
+       
+       <!-- O P -->
+       <typeAlias type="kr.or.workFit.vo.OfficialCalendarVO" alias="officialCalendarVO"/>
+       <typeAlias type="kr.or.workFit.vo.PaginationVO" alias="paginationVO"/>
+       <typeAlias type="kr.or.workFit.vo.PaymentHistoryVO" alias="paymentHistoryVO"/>
+       <typeAlias type="kr.or.workFit.vo.PdfPreviewVO" alias="pdfPreviewVO"/>
+       <typeAlias type="kr.or.workFit.vo.PostVO" alias="postVO"/>
+       
+       <typeAlias type="kr.or.workFit.vo.PublicDocVO" alias="publicDocVO"/>
+       
+       <!-- Q  -->
+       <typeAlias type="kr.or.workFit.vo.QaFirstVO" alias="qaFirstVO"/>
+       <typeAlias type="kr.or.workFit.vo.QaSecondVO" alias="qaSecondVO"/>
+       <typeAlias type="kr.or.workFit.vo.QaThirdVO" alias="qaThirdVO"/>
+       
+       <!-- R -->
+       <typeAlias type="kr.or.workFit.vo.ReservationTimeVO" alias="reservationTimeVO"/>
+       <typeAlias type="kr.or.workFit.vo.ReservationVO" alias="reservationVO"/>
+       <typeAlias type="kr.or.workFit.vo.ResourceVO" alias="resourceVO"/>
+       <typeAlias type="kr.or.workFit.vo.myworkhelper.ResultDayInfo" alias="resultDayInfo"/>
+       
+       <!-- S ~ Z -->
+       <typeAlias type="kr.or.workFit.vo.SalesPerformanceVO" alias="salesPerformanceVO"/>
+       <typeAlias type="kr.or.workFit.vo.ServiceVO" alias="serviceVO"/>
+       <typeAlias type="kr.or.workFit.vo.TodayVO" alias="todayVO"/>
+       <typeAlias type="kr.or.workFit.vo.VacationTypeVO" alias="vacationTypeVO"/>
+       <typeAlias type="kr.or.workFit.vo.VacationVO" alias="vacationVO"/>
+       
+       <typeAlias type="kr.or.workFit.vo.WorkVO" alias="workVO"/>
+      
+   </typeAliases>
+	  
+	  
+</configuration>

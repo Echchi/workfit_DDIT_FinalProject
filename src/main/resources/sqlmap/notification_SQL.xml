@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.notification.NotificationMapper">
+
+	<select id="selectDocInfo" parameterType="String" resultType="approvalDocVO">
+		SELECT * FROM APPROVAL_DOC WHERE APPROVAL_DOC_CODE = #{docCode}
+	</select>
+
+	<insert id="insertNotification" parameterType="kr.or.workFit.vo.NotificationVO">
+		INSERT INTO NOTIFICATION VALUES('NOT'||SEQ_NOTIFICATION.NEXTVAL,#{notSender},#{notReceiver}, #{notContent}, 'false',#{notRelatedUrl}, SYSDATE) 
+		<selectKey resultType="String" keyProperty="notCurrNum" order="AFTER">
+        	SELECT 'NOT'||SEQ_NOTIFICATION.CURRVAL FROM DUAL
+    	</selectKey>   
+	</insert>
+	
+	<select id="selectReceivedNotification" parameterType="String" resultType="kr.or.workFit.vo.NotificationVO">
+		SELECT A.NOT_NUM, A.NOT_SENDER, A.NOT_RECEIVER, A.NOT_CONTENT, A.NOT_ISREAD, A.NOT_RELATED_URL, A.NOT_SENDED_DATE, B.MEM_PROFILE_URL 
+		FROM NOTIFICATION A, MEMBER B WHERE A.NOT_RECEIVER = B.MEM_ID AND A.NOT_RECEIVER = #{memId} ORDER BY NOT_SENDED_DATE DESC
+	</select>
+	
+	<select id="selectSenderProfile" resultType="String" parameterType="String">
+		SELECT MEM_PROFILE_URL FROM MEMBER WHERE MEM_ID = #{notSender}
+	</select>
+	
+	<update id="updateReadState" parameterType="String">
+		UPDATE NOTIFICATION
+		SET 
+		NOT_ISREAD = 'true'
+		WHERE NOT_NUM = #{notNum}
+	</update>
+	
+	<delete id="deleteNotification" parameterType="String">
+		DELETE FROM NOTIFICATION
+		WHERE NOT_NUM = #{notNum}
+	</delete>
+</mapper>

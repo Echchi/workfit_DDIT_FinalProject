@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.approval.ApprovalMapper">
+
+	<sql id="startSerach">
+		<if test="startDate != null and endDate != ''">
+			<![CDATA[
+			and TO_CHAR(APPROVAL_DATE,'YYYYMMDD') >= TO_CHAR(TO_DATE(#{startDate},'YYYY-MM-DD'),'YYYYMMDD')
+			]]>
+		</if>
+	</sql>
+
+	<sql id="endSerach">
+		<if test="endDate != null and endDate != ''">
+			<![CDATA[
+			and TO_CHAR(APPROVAL_DATE,'YYYYMMDD') <=  TO_CHAR(TO_DATE(#{endDate},'YYYY-MM-DD'),'YYYYMMDD')
+			]]>
+		</if>
+	</sql>
+	
+	<sql id="date1">
+		<if test="approvalFlag == 1">
+			, APPROVAL_DATE
+		</if>
+	</sql>
+	<sql id="date2">
+		<if test="approvalFlag == 1">
+			, sysdate
+		</if>
+	</sql>
+	
+	<sql id="delgation1">
+		<if test="delegationStatus != null">
+			, DELEGATION_STATUS
+		</if>
+	</sql>
+	<sql id="delgation2">
+		<if test="delegationStatus != null">
+			, #{delegationStatus}
+		</if>
+	</sql>
+	<sql id="status1">
+		<if test="approvalFlag == 1">
+			, APPROVAL_STATUS
+		</if>
+	</sql>
+	<sql id="status2">
+		<if test="approvalFlag == 1">
+			, 1
+		</if>
+	</sql>
+
+
+	<select id="selectReport" parameterType="approvalVO" resultType="approvalDocVO">
+		select * from approval_doc
+		where approval_doc_code in
+		(select
+		approval_doc_code from approval
+		where mem_id = #{memId} and
+		approval_flag = '1'
+		<include refid="startSerach" />
+		<include refid="endSerach" />
+		)
+
+	</select>
+
+	<select id="selectAttach" parameterType="string"
+		resultType="int">
+		select count(*) from APPROVAL_ATTACH where
+		approval_doc_code = #{approvalDocCode}
+	</select>
+
+	<select id="selectApprovalCommentNum" parameterType="string"
+		resultType="int">
+		select count(*) from approval where approval_doc_code =
+		#{approvalDocCode}
+	</select>
+
+	<select id="selectApproval" parameterType="string"
+		resultType="approvalVO">
+		select * from approval 
+		where approval_doc_code = #{approvalDocCode}
+		and approval_flag = '1'
+	</select>
+
+	<select id="countreference" parameterType="string"
+		resultType="int">
+		select count(*) from APPROVAL_REFERENCE where
+		approval_doc_code = #{approvalDocCode}
+	</select>
+
+	<select id="checkBookmark" parameterType="approvalBookmarkVO" resultType="int">
+		select count(*) from APPROVAL_BOOKMARK
+		where mem_id =#{memId} and approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	
+	<select id="selectListBookmark" parameterType="approvalVO" resultType="approvalDocVO">
+		select * from approval_doc
+		where approval_doc_code in(
+		select APPROVAL_DOC_CODE from APPROVAL_BOOKMARK
+		where mem_id = #{memId})
+	</select>
+	
+	
+	<select id="selectTemplateList" parameterType="approvalVO" resultType="approvalTemplateVO">
+		select APPROVAL_TEMPLATE_CODE,APPROVAL_TEMPLATE_TYPE, APPROVAL_TEMPLATE_TITLE,  APPROVAL_TEMPLATE_BOOKMARK
+		from APPROVAL_TEMPLATE 
+		where CO_CODE = (select CO_CODE from member where mem_id  = #{memId})
+	</select>
+	
+	<select id="selectTemplateContent" parameterType="String" resultType="approvalTemplateVO">
+		select APPROVAL_TEMPLATE_CONTENT 
+		from APPROVAL_TEMPLATE
+		where APPROVAL_TEMPLATE_CODE = #{approvalTemplateContent}
+	</select>
+	
+	<select id="getTemplateContent" parameterType="hashmap" resultType="approvalTemplateVO">
+		select *
+		from APPROVAL_TEMPLATE
+		where APPROVAL_TEMPLATE_TITLE = #{templateTitle}
+		and CO_CODE = (select CO_CODE from member where mem_id  = #{memId})
+	</select>	
+	
+	<insert id="insertApprovalDoc" parameterType="approvalDocVO">
+		insert into approval_doc 
+		(APPROVAL_DOC_CODE, 
+		APPROVAL_TEMPLATE_CODE, 
+		APPROVAL_TYPE, 
+		APPROVAL_DOC_TITLE, 
+		APPROVAL_CONTENT, 
+		APPROVAL_DOC_STATUS, 
+		APPROVAL_ACCESS_AUTH, 
+		APPROVAL_DEADLINE, 
+		APPROVAL_SCOPE) 
+		values
+		(#{memCo}||SEQ_APPROVAL_DOC.nextval,
+		#{approvalTemplateCode}, 
+		#{approvalType}, 
+		#{approvalDocTitle}, 
+		#{approvalContent}, 
+		'1', 
+		null, 
+		null, 
+		#{approvalScope})	
+		<selectKey keyProperty="approvalDocCode" resultType="string" order="AFTER" >
+			select #{memCo} || SEQ_APPROVAL_DOC.currval from dual
+		</selectKey>
+	</insert>
+	
+	<insert id="insertApprovalLine" parameterType="approvalVO">
+		insert into approval 
+		(APPROVAL_CODE,
+		APPROVAL_DOC_CODE, 
+		MEM_ID,
+		MEM_NAME, 
+		APPROVAL_FLAG, 
+		APPROVAL_COMMENT, 
+        APPROVAL_MEM_GRADE, 
+        AGREEMENT_STATUS,
+        DELEGATION_STATUS
+        <include refid="status1" />
+        <include refid="date1" />
+		)
+		values
+        ('TEST'||SEQ_APPROVAL.nextval,
+        #{approvalDocCode},
+        #{memId},
+        #{memName},
+        #{approvalFlag},
+        #{approvalComment, jdbcType=VARCHAR},
+		#{approvalMemGrade, jdbcType=VARCHAR}, 
+		#{agreementStatus},
+		#{delegationStatus, jdbcType=CHAR}
+		<include refid="status2" />
+        <include refid="date2" />
+		)
+	</insert>
+	
+	<insert id="insertApprovalReference" parameterType="approvalReferenceVO" useGeneratedKeys="true">
+		<selectKey order="BEFORE" keyProperty="memName" resultType="String">
+			select MEM_NAME
+			from member where mem_id = #{memId}
+		</selectKey>
+		insert into APPROVAL_REFERENCE 
+		(APPROVAL_REFERENCE_CODE, APPROVAL_DOC_CODE, MEM_ID, MEM_NAME)
+		values									 
+		('TEST'||SEQ_APPROVAL_REFERENCE.nextval, #{approvalDocCode}, #{memId, jdbcType=VARCHAR}, #{memName, jdbcType=VARCHAR})
+	</insert>
+	
+	<select id="getApprAttach" parameterType="string" resultType="approvalAttachVO">
+			select * 
+			from APPROVAL_ATTACH
+			where 
+			APPROVAL_ATTACH_CODE = #{aprvId}
+	</select>
+	
+	<insert id="insertApprovalAttach" parameterType="approvalAttachVO">
+		insert into APPROVAL_ATTACH 		
+		(APPROVAL_ATTACH_CODE,  
+		APPROVAL_DOC_CODE,   
+		APPROVAL_ATTACH_NAME, 
+		APPROVAL_ATTACH_NEWNAME,  
+		APPROVAL_ATTACH_SAVEPATH, 
+		APPROVAL_ATTACH_DATE, 
+		APPROVAL_ATTACH_SIZE,  
+		APPROVAL_ATTACH_TYPE)
+		values
+		('TEST'||SEQ_APPROVAL_ATTACH.nextval,
+		#{approvalDocCode},
+		#{approvalAttachName, jdbcType=VARCHAR},
+		#{approvalAttachNewname, jdbcType=VARCHAR},
+		#{approvalAttachSavepath, jdbcType=VARCHAR},
+		sysdate,
+		#{approvalAttachSize, jdbcType=VARCHAR},
+		#{approvalAttachType, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<insert id="saveDoc" parameterType="approvalDocVO">
+		insert into approval_doc 
+		(APPROVAL_DOC_CODE, 
+		APPROVAL_TEMPLATE_CODE, 
+		APPROVAL_TYPE, 
+		APPROVAL_DOC_TITLE, 
+		APPROVAL_CONTENT, 
+		APPROVAL_DOC_STATUS, 
+		APPROVAL_ACCESS_AUTH, 
+		APPROVAL_DEADLINE, 
+		APPROVAL_SCOPE,
+		APPROVAL_SAVECHECK) 
+		values
+		('TEMP'||SEQ_APPROVAL_DOC.nextval,
+		#{approvalTemplateCode, jdbcType=VARCHAR}, 
+		#{approvalType, jdbcType=VARCHAR}, 
+		#{approvalDocTitle, jdbcType=VARCHAR}, 
+		#{approvalContent, jdbcType=VARCHAR}, 
+		'1', 
+		null, 
+		null, 
+		#{approvalScope, jdbcType=CHAR},
+		'1')	
+		<selectKey keyProperty="approvalDocCode" resultType="string" order="AFTER" >
+			select 'TEMP' || SEQ_APPROVAL_DOC.currval from dual
+		</selectKey>
+	</insert>
+	
+	<!--  -->
+	<select id="getReportList" parameterType="String" resultType="map">
+	select 
+	        a.APPROVAL_DOC_CODE as approvalDocCode,
+	        a.APPROVAL_DOC_TITLE as approvalDocTitle,
+	        a.APPROVAL_TYPE as approvalType,
+	        a.APPROVAL_DOC_STATUS as approvalDocStatus,
+	        b.APPROVAL_DATE as approvalDate,
+	        (select count(APPROVAL_COMMENT) from approval where APPROVAL_DOC_CODE = a.APPROVAL_DOC_CODE) as COMMENTCNT,
+	        count(c.APPROVAL_DOC_CODE)as attachCnt,
+	        (select count(APPROVAL_DOC_CODE) from APPROVAL_REFERENCE where APPROVAL_DOC_CODE = a.APPROVAL_DOC_CODE) as referencCnt
+	        
+	        from APPROVAL_DOC a 
+	            left join APPROVAL b on (a.APPROVAL_DOC_CODE = b.APPROVAL_DOC_CODE)
+	            left join APPROVAL_ATTACH c on (b.APPROVAL_DOC_CODE = c.APPROVAL_DOC_CODE)
+	            left join APPROVAL_REFERENCE d on (c.APPROVAL_DOC_CODE = d.APPROVAL_DOC_CODE)
+	            left join APPROVAL_BOOKMARK e on (d.APPROVAL_DOC_CODE = e.APPROVAL_DOC_CODE)
+	            
+	        where b.approval_flag = '1' 
+	        and b.mem_id = #{mem_id}
+	        and a.approval_doc_code = b.approval_doc_code
+	                
+	        group by 
+	        a.APPROVAL_DOC_CODE, 
+	        a.APPROVAL_DOC_TITLE, 
+	        a.APPROVAL_TYPE, 
+	        a.APPROVAL_DOC_STATUS, 
+	        b.APPROVAL_DATE, 
+	        b.APPROVAL_COMMENT,
+	        c.APPROVAL_DOC_CODE,
+	        d.APPROVAL_DOC_CODE
+	        order by b.APPROVAL_DATE desc
+	</select>
+	
+	<select id="ingAppvCnt" parameterType="string" resultType="int">
+		select count(*) from(
+			select 
+			a.APPROVAL_DOC_CODE as approvalDocCode,
+			a.APPROVAL_DOC_TITLE as approvalDocTitle,
+			a.APPROVAL_TYPE as approvalType,
+			a.APPROVAL_DOC_STATUS as approvalDocStatus,
+			b.APPROVAL_DATE as approvalDate,
+			count(b.APPROVAL_COMMENT)as commentCnt,
+			count(c.APPROVAL_DOC_CODE)as attachCnt,
+			count(d.APPROVAL_DOC_CODE)as referencCnt
+			
+			from APPROVAL_DOC a 
+			    left join APPROVAL b on (a.APPROVAL_DOC_CODE = b.APPROVAL_DOC_CODE)
+			    left join APPROVAL_ATTACH c on (b.APPROVAL_DOC_CODE = c.APPROVAL_DOC_CODE)
+			    left join APPROVAL_REFERENCE d on (c.APPROVAL_DOC_CODE = d.APPROVAL_DOC_CODE)
+			    left join APPROVAL_BOOKMARK e on (d.APPROVAL_DOC_CODE = e.APPROVAL_DOC_CODE)
+			    
+		    where a.approval_doc_code in (select APPROVAL_DOC_CODE from APPROVAL where b.MEM_ID = #{memId} and b.approval_flag = '1')
+		    and b.APPROVAL_COMMENT is not null
+            and a.approval_doc_status = '1' 
+			group by 
+			a.APPROVAL_DOC_CODE, 
+			a.APPROVAL_DOC_TITLE, 
+			a.APPROVAL_TYPE, 
+			a.APPROVAL_DOC_STATUS, 
+			b.APPROVAL_DATE, 
+			b.APPROVAL_COMMENT,
+			c.APPROVAL_DOC_CODE,
+			d.APPROVAL_DOC_CODE
+			order by b.APPROVAL_DATE asc
+		)
+	
+	
+	</select>
+	
+	<select id="acceptAppvCnt" parameterType="string" resultType="int">
+		select count(*) from(
+			select 
+			a.APPROVAL_DOC_CODE as approvalDocCode,
+			a.APPROVAL_DOC_TITLE as approvalDocTitle,
+			a.APPROVAL_TYPE as approvalType,
+			a.APPROVAL_DOC_STATUS as approvalDocStatus,
+			b.APPROVAL_DATE as approvalDate,
+			count(b.APPROVAL_COMMENT)as commentCnt,
+			count(c.APPROVAL_DOC_CODE)as attachCnt,
+			count(d.APPROVAL_DOC_CODE)as referencCnt
+			
+			from APPROVAL_DOC a 
+			    left join APPROVAL b on (a.APPROVAL_DOC_CODE = b.APPROVAL_DOC_CODE)
+			    left join APPROVAL_ATTACH c on (b.APPROVAL_DOC_CODE = c.APPROVAL_DOC_CODE)
+			    left join APPROVAL_REFERENCE d on (c.APPROVAL_DOC_CODE = d.APPROVAL_DOC_CODE)
+			    left join APPROVAL_BOOKMARK e on (d.APPROVAL_DOC_CODE = e.APPROVAL_DOC_CODE)
+			    
+		    where a.approval_doc_code in (select APPROVAL_DOC_CODE from APPROVAL where b.MEM_ID = #{memId} and b.approval_flag = '1')
+		    and b.APPROVAL_COMMENT is not null
+            and a.approval_doc_status = '2' 
+			group by 
+			a.APPROVAL_DOC_CODE, 
+			a.APPROVAL_DOC_TITLE, 
+			a.APPROVAL_TYPE, 
+			a.APPROVAL_DOC_STATUS, 
+			b.APPROVAL_DATE, 
+			b.APPROVAL_COMMENT,
+			c.APPROVAL_DOC_CODE,
+			d.APPROVAL_DOC_CODE
+			order by b.APPROVAL_DATE asc
+		)
+	
+	
+	</select>
+	
+	<select id="rejectAppvCnt" parameterType="string" resultType="int">
+		select count(*) from(
+			select 
+			a.APPROVAL_DOC_CODE as approvalDocCode,
+			a.APPROVAL_DOC_TITLE as approvalDocTitle,
+			a.APPROVAL_TYPE as approvalType,
+			a.APPROVAL_DOC_STATUS as approvalDocStatus,
+			b.APPROVAL_DATE as approvalDate,
+			count(b.APPROVAL_COMMENT)as commentCnt,
+			count(c.APPROVAL_DOC_CODE)as attachCnt,
+			count(d.APPROVAL_DOC_CODE)as referencCnt
+			
+			from APPROVAL_DOC a 
+			    left join APPROVAL b on (a.APPROVAL_DOC_CODE = b.APPROVAL_DOC_CODE)
+			    left join APPROVAL_ATTACH c on (b.APPROVAL_DOC_CODE = c.APPROVAL_DOC_CODE)
+			    left join APPROVAL_REFERENCE d on (c.APPROVAL_DOC_CODE = d.APPROVAL_DOC_CODE)
+			    left join APPROVAL_BOOKMARK e on (d.APPROVAL_DOC_CODE = e.APPROVAL_DOC_CODE)
+			    
+		    where a.approval_doc_code in (select APPROVAL_DOC_CODE from APPROVAL where b.MEM_ID = #{memId} and b.approval_flag = '1')
+		    and b.APPROVAL_COMMENT is not null
+            and a.approval_doc_status = '3' 
+			group by 
+			a.APPROVAL_DOC_CODE, 
+			a.APPROVAL_DOC_TITLE, 
+			a.APPROVAL_TYPE, 
+			a.APPROVAL_DOC_STATUS, 
+			b.APPROVAL_DATE, 
+			b.APPROVAL_COMMENT,
+			c.APPROVAL_DOC_CODE,
+			d.APPROVAL_DOC_CODE
+			order by b.APPROVAL_DATE asc
+		)
+	
+	
+	</select>
+	
+</mapper>

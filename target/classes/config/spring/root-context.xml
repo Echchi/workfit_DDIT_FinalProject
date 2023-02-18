@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	
+	 <!-- dataSource : 데이터베이스와 관련된 정보를 설정한다. 
+	 	BasicDataSource dataSource = new BasicDataSource()
+	 	스프링 프레임워크(디자인 패턴(MVC) + 라이브러리(import))는 기동시 자바빈으로 등록해줌
+	 -->
+	 <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+	 	<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver"/>
+	 	<property name="url" value="jdbc:oracle:thin:@112.220.114.130:1521:xe"/>
+<!-- 	 	<property name="url" value="jdbc:oracle:thin:@localhost:1521:xe"/> -->
+	 	<property name="username" value="team1_202207F"/>
+<!-- 	 	<property name="username" value="test"/> -->
+	 	<property name="password" value="java"/>
+	 </bean>
+	 
+	 <!-- 
+	 	데이터베이스와 연결을 맺고 끊어질 때까지의 라이프 사이클을 관리해주는 SqlSession 객체를 생성
+	 	1) dataSource
+	 	2) Mapper xml의 위치 지정
+	 		- src/main/resources/
+	  -->
+	 <bean id="sqlSession" class="org.mybatis.spring.SqlSessionFactoryBean">
+	 	<property name="dataSource" ref="dataSource"/>
+	 	<property name="mapperLocations" value="classpath:/sqlmap/**/*_SQL.xml"/>
+	 	<property name="configLocation" value="classpath:config/mybatis/mybatisAlias.xml"/>
+	 </bean>
+	 
+	 <!-- 
+	 	데이터베이스에 개별적으로 쿼리를 실행시키는 객체
+	 	이 객체를 통해서 query를 실행한다.
+	  -->
+	  <bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+	  	<constructor-arg ref="sqlSession"></constructor-arg>
+	  </bean>
+	  
+	  <bean id="commonDao" class="kr.common.CommonDao">
+      	<property name="sqlSession" ref="sqlSessionTemplate"></property>
+      </bean>
+      
+	   <!-- 
+	  	Mapper 인터페이스 설정
+	  	개발자가 직접 DAO를 설정하지 않아도 자동으로 Mapper 인터페이스를 활용하는 객체를 생성하게 된다.
+	  	value는 mapper package를 다 빈즈에 올려주나 보다
+	  	
+	   -->
+	   <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+	   		<property name="basePackage" value="kr.or.workFit.mapper"/>
+	   </bean>
+	  	
+<!-- 	  	서비스 빈 먼저 스캔! -->
+	    <context:component-scan base-package="kr.or.workFit.service" />
+	  	<import resource="security-config.xml"/>
+</beans>

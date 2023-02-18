@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.schedule.ScheduleMapper">
+
+  <resultMap id="calendarRM" type="memCalendarVO">
+    <result property="id" column="MEM_ID" />
+    <result property="groupId" column="MEM_CALEN_CODE" />
+    <result property="title" column="MEM_CALEN_TITLE" />
+    <result property="memo" column="MEM_CALEN_CONTENT" />
+    <result property="start" column="MEM_CALEN_START_DATE" />
+    <result property="end" column="MEM_CALEN_END_DATE" />
+    <result property="allDay" column="MEM_CALEN_ALLDAY" javaType="boolean" />
+    <result property="color" column="MEM_CALEN_COLOR" />
+    <result property="textColor" column="MEM_CALEN_TEXTCOLOR" />
+  </resultMap>
+	
+	<select id="getCalendar" resultMap="calendarRM" parameterType="map">
+		select * from mem_calendar where 1!=1
+		<if test="memId != null">
+			or mem_id = #{memId} 
+		</if>
+		<if test="memDeptName != null">
+			or mem_id = #{memDeptName}
+		</if>
+	</select>
+	
+	<select id="getDeptCal" resultMap="calendarRM" parameterType="string">
+		select * from mem_calendar where mem_id = #{memId} and MEM_CALEN_START_DATE LIKE '%'||(select REPLACE(20||sysdate, '/', '-') from dual)||'%'
+	</select>
+
+	<insert id="insert" parameterType="memCalendarVO" useGeneratedKeys="true">
+		<selectKey order="BEFORE" resultType="int" keyProperty="groupId">
+			select SEQ_MEM_CALENDAR.nextval from dual
+		</selectKey>
+			insert into mem_calendar
+			(
+				MEM_CALEN_CODE,
+				MEM_ID,
+				MEM_CALEN_TITLE,
+				MEM_CALEN_CONTENT,
+				MEM_CALEN_START_DATE,
+				MEM_CALEN_END_DATE,
+				MEM_CALEN_COLOR,
+				MEM_CALEN_ALLDAY,
+				MEM_CALEN_TEXTCOLOR
+			)
+			values(
+				#{groupId},
+				#{id},
+				#{title},
+				#{memo},
+				#{start},
+				#{end},
+				#{color},
+				#{allDay},
+				#{textColor}
+			)
+	</insert>
+	
+	<delete id="delete" parameterType="int">
+		delete from mem_calendar where MEM_CALEN_CODE = #{groupId}
+	</delete>
+	
+	<select id="selectOne" parameterType="int" resultMap="calendarRM">
+		select * from mem_calendar where MEM_CALEN_CODE = #{groupId}
+	</select>
+	
+	<update id="update" parameterType="memCalendarVO">
+		update mem_calendar
+		set
+			MEM_CALEN_TITLE = #{title},
+			MEM_CALEN_CONTENT = #{memo},
+			MEM_CALEN_START_DATE = #{start},
+			MEM_CALEN_END_DATE = #{end},
+			MEM_CALEN_COLOR = #{color}
+		where MEM_CALEN_CODE = #{groupId}	
+	</update>
+</mapper>

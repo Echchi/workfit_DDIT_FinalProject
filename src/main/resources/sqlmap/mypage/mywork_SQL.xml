@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.mypage.MyWorkMapper">
+
+<select id="monthlyDays" parameterType="kr.or.workFit.vo.myworkhelper.DayInfo" resultType="kr.or.workFit.vo.myworkhelper.ResultDayInfo">
+      <![CDATA[
+	SELECT   A.days, to_char(TO_DATE(A.days), 'dy') as yoil
+       FROM (SELECT (CASE
+                 WHEN LEVEL < 10
+                      THEN EXTRACT(YEAR FROM to_date(#{date}))||'/'||SUBSTR(#{date},6,2)||'/'||'0' || LEVEL
+                           ELSE EXTRACT(YEAR FROM to_date(#{date}))||'/'||SUBSTR(#{date},6,2)||'/'|| LEVEL
+                        END
+                        ) AS days
+                  FROM DUAL              
+   CONNECT BY LEVEL <= TO_NUMBER(SUBSTR(TO_CHAR(LAST_DAY (TO_DATE (#{year} || #{month} || '01000000', 'YYYYMMDDHH24MISS')), 'YYYYMMDD'), 7, 2 ))) A
+	]]>
+</select>
+
+<select id="monthlyWorkDays" resultType="workVO" parameterType="kr.or.workFit.vo.myworkhelper.DayInfo">
+	select * from work 
+	where mem_id = #{memId} and EXTRACT(MONTH FROM work_date) = #{month}
+	order by work_date
+</select>
+
+
+<!-- 주차별 날짜 데이터를 뽑아주는 쿼리문 -->
+<select id="weeklyDays" parameterType="kr.or.workFit.vo.myworkhelper.DayInfo" resultType="kr.or.workFit.vo.myworkhelper.ResultDayInfo">
+<![CDATA[
+SELECT * FROM 
+(SELECT A.days, to_char(TO_DATE(A.days), 'dy') as yoil
+        FROM (SELECT (CASE
+                     WHEN LEVEL  < 10
+                        THEN EXTRACT(YEAR FROM to_date(#{date}))||'/'||SUBSTR(#{date},6,2)||'/'|| '0'||LEVEL
+                             ELSE EXTRACT(YEAR FROM to_date(#{date}))||'/'||SUBSTR(#{date},6,2)||'/'||LEVEL
+                          END
+                         ) AS days 
+                    FROM DUAL              
+              CONNECT BY LEVEL <= TO_NUMBER(SUBSTR(TO_CHAR(LAST_DAY (TO_DATE (#{year} || #{month} || '01000000', 'YYYYMMDDHH24MISS')), 'YYYYMMDD'), 7, 2 ))) A)
+   WHERE TO_CHAR(TO_DATE(DAYS),'W') = #{weekNum}
+]]>   
+</select>
+
+
+<select id="weeklyWorkDays" parameterType="kr.or.workFit.vo.myworkhelper.DayInfo" resultType="workVO">
+<![CDATA[
+	SELECT WORK_DATE, MEM_ID, WORK_START, WORK_END, WORK_TIME, REST_TIME, LATE_STATUS FROM  
+(SELECT A.days, to_char(TO_DATE(A.days), 'dy') as yoil
+        FROM (SELECT (CASE
+                     WHEN LEVEL  < 10
+                        THEN EXTRACT(YEAR FROM to_date(#{date}))||'/'||SUBSTR(#{date},6,2)||'/'|| '0'||LEVEL
+                             ELSE EXTRACT(YEAR FROM to_date(#{date}))||'/'||SUBSTR(#{date},6,2)||'/'||LEVEL
+                          END
+                         ) AS days 
+                    FROM DUAL              
+              CONNECT BY LEVEL <= TO_NUMBER(SUBSTR(TO_CHAR(LAST_DAY (TO_DATE (#{year} || #{month} || '01000000', 'YYYYMMDDHH24MISS')), 'YYYYMMDD'), 7, 2 ))) A
+   WHERE TO_CHAR(TO_DATE(DAYS),'W') = #{weekNum}) B, WORK C
+   WHERE TO_DATE(B.DAYS) = TO_DATE(C.WORK_DATE) AND MEM_ID = #{memId}
+  ]]> 
+</select>
+
+
+
+
+<insert id="insertCommuteStart" parameterType="workVO">
+<![CDATA[
+	INSERT INTO WORK VALUES(SYSDATE, #{memId}, SUBSTR(TO_CHAR(SYSDATE, 'HH24:MI:SS'),0,5), '-', 0, #{restTime}, (SELECT (CASE
+            WHEN TO_CHAR(SYSDATE, 'HH24:MI:SS') < '09:00:00'
+                        THEN 'n'
+                             ELSE 'y'
+                          END
+                         )  
+                    FROM DUAL))
+   ]]>
+</insert>
+
+<update id="endCommute" parameterType="String">
+	UPDATE WORK
+SET 
+ WORK_END = SUBSTR(TO_CHAR(SYSDATE,'HH24:MI:SS'),0,5),
+ WORK_TIME = (SELECT ROUND((TO_DATE(SUBSTR(TO_CHAR(SYSDATE,'HH24:MI:SS'),0,5), 'HH24:MI') - TO_DATE(WORK_START, 'HH24:MI')) * 24 * 60,0) AS WORK_TIME
+  FROM WORK
+  WHERE TO_DATE(WORK_DATE) = TO_CHAR(SYSDATE) AND MEM_ID = #{memId})
+WHERE TO_DATE(WORK_DATE) = TO_CHAR(SYSDATE) AND MEM_ID = #{memId}
+</update>
+
+<select id="findMemberForCommuteEndProcess" resultType="workVO">
+	SELECT * FROM WORK 
+	WHERE WORK_START != '-' AND WORK_END = '-'
+</select>
+
+</mapper>

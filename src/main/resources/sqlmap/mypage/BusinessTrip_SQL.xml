@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="businessTrip">
+	<select id="getMydeptList" resultType="memberVO" parameterType="string">
+		select mem_id, mem_name, mem_job_grade 
+		  from member 
+	     where dept_fk = #{memDeptCode}
+	</select>
+	
+	<insert id="insertBusinessTrip" parameterType="businessTripVO">
+		insert into business_trip 
+		(
+			BUSINESS_TRIP_CODE, 
+			MEM_ID, 
+			BUSINESS_TRIP_CONFIRMID, 
+			BUSINESS_TRIP_PURPOSE, 
+			BUSINESS_TRIP_DATE, 
+			BUSINESS_TRIP_EXPENSE, 
+			BUSINESS_TRIP_STATUS, 
+			BUSINESS_TRIP_LOCATION,
+			BUSINESS_TRIP_SIGNDATE
+		)
+		values(
+			SEQ_BUSINESS_TRIP.NEXTVAL, 
+			#{memId},
+			#{businessTripConfirmid}, 
+			#{businessTripPurpose}, 
+			#{businessTripDate}, 
+			#{businessTripExpense}, 
+			'N',
+			#{businessTripLocation},
+			SYSDATE 
+		)
+	</insert>
+	
+	<!-- 본인인 신청한 출장 리스트 뽑기 -->
+	<select id="myBusinessList" parameterType="hashmap" resultType="businessTripVO">
+		select * from business_trip where mem_id = #{memId}
+		  and BUSINESS_TRIP_SIGNDATE BETWEEN trunc(to_date(#{time}), 'MM')  AND 
+		       LAST_DAY(TO_DATE(#{time}, 'yyyy-MM-dd'))
+      order by BUSINESS_TRIP_SIGNDATE desc
+	</select>
+	
+	<!-- 내 출장 승인자 정보 가져오는 쿼리 -->
+	<select id="getApproveMemInfo" parameterType="string" resultType="memberVO">
+		SELECT A.* FROM 
+		MEMBER A, BUSINESS_TRIP B
+		WHERE B.BUSINESS_TRIP_CODE = #{businessTripCode}
+	  	AND B.BUSINESS_TRIP_CONFIRMID = A.MEM_ID
+	
+	</select>
+	
+	
+	<!--  본인이 신청한 출장 삭제하기 -->
+	<delete id="deleteBusinessTrip" parameterType="string">
+		delete business_trip where  BUSINESS_TRIP_CODE = #{code}
+	</delete>
+	
+	<!-- 출장 승인 -->
+	<select id="myBusinessTripApprove" parameterType="hashmap" resultType="businessTripVO">
+		SELECT B.MEM_NAME , A.* 
+		 FROM BUSINESS_TRIP A, MEMBER B
+		 WHERE A.BUSINESS_TRIP_CONFIRMID = #{businessTripConfirmid}
+		  AND A.MEM_ID = B.MEM_ID
+		  and a.BUSINESS_TRIP_SIGNDATE BETWEEN trunc(to_date(#{time}), 'MM')  AND 
+		       LAST_DAY(TO_DATE(#{time}, 'yyyy-MM-dd'))
+      order by a.BUSINESS_TRIP_SIGNDATE desc
+	</select>
+	
+	<!--  출장 코드로 단건 정보 가져오기 -->
+	<select id="getOneBusiness" parameterType="string" resultType="businessTripVO">
+		SELECT B.MEM_NAME , A.* 
+		 FROM BUSINESS_TRIP A, MEMBER B
+		 WHERE A.BUSINESS_TRIP_CODE = #{businessTripCode}
+		  AND A.MEM_ID = B.MEM_ID
+	</select>
+	
+	<!-- 단건 또는 여러 건 출장 승인 상태 (승인/ 반려로 바꾸기) -->
+	<update id="businessTripManage" parameterType="java.util.HashMap">
+		<foreach collection="btList" item="item" index="index" separator=";" open="DECLARE BEGIN" close="; END;">
+			UPDATE BUSINESS_TRIP
+			SET BUSINESS_TRIP_STATUS = #{status}
+			WHERE BUSINESS_TRIP_CODE = #{item}
+		</foreach>
+	</update>
+	
+	
+</mapper>

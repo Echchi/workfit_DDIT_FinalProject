@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.chatbot.ChatbotMapper">
+	
+	<select id="getChat" parameterType="hashMap" resultType="chatBotFAQVO">
+		select level, c.CHATBOT_Q, c.CHATBOT_ID_FK, c.CHATBOT_UQ, c.CHATBOT_A, c.CHATBOT_HITUP, 
+			   CONNECT_BY_ISLEAF ENDSTATUS, c.CHATBOT_TITLE, c.CHATBOT_TYPE
+		from chatbot_faq c
+		where CHATBOT_ID_FK = (select b.chatbot_id 
+		                         from co a join chatbot b
+		                            on ( a.chatbot_id = b.chatbot_id and b.chatbot_status = 'y' )
+		                        where a.co_code = #{coCode})
+		    <if test="level == 1">
+			    and level = 1
+		    	and c.CHATBOT_UQ is null
+		    </if>
+		    <if test="level != 1">
+			    and level = #{level}
+			    and c.CHATBOT_UQ = #{chatBotUq}
+		    </if>
+		
+<!-- 		and EXISTS (select 1 from chatbot_faq d where d.chatbot_q = c.chatbot_uq) -->
+		start with CHATBOT_UQ is null
+		connect by prior CHATBOT_Q = CHATBOT_UQ
+		order SIBLINGS by chatbot_q
+	</select>
+	
+	<select id="getAnswer" parameterType="string" resultType="chatBotFAQVO">
+        select CHATBOT_Q, CHATBOT_TITLE, CHATBOT_TYPE
+          from chatbot_faq
+         where chatbot_q = #{chatbotQ}
+	</select>
+	
+	<select id="getInfoUse" parameterType="string" resultType="hashMap">
+<!-- 		 select A.CO_CODE,A.CO_NAME,A.CO_BUY_SERVICE,A.CO_SUBS_PERIOD,A.CHATBOT_ID, B.CHATBOT_ID,B.CHATBOT_STATUS -->
+		 select A.CO_CODE,A.CO_NAME,A.CHATBOT_ID, B.CHATBOT_ID,B.CHATBOT_STATUS
+		   from co a join chatbot b
+		     on(a.chatbot_id = b.chatbot_id)
+		  where co_code = #{coCode}
+	</select>
+	
+	<select id="checkCreatedChatbotCode" parameterType="string" resultType="int">
+		select count(chatbot_id)
+		  from co
+   		 where co_code = #{coCode}
+	</select>
+	
+	<insert id="createChatbotCode" useGeneratedKeys="true">
+		<selectKey keyProperty="chatbotId" order="BEFORE" resultType="string">
+			select LPAD(SEQ_CHATBOT.nextval,3,'0') from dual
+		</selectKey>
+		 insert into CHATBOT(chatbot_id,CHATBOT_STATUS)
+    	values ('cb'||#{chatbotId},'n')
+	</insert>
+	
+	<update id="updateCoChatbotCode" parameterType="string">
+		  update co
+    		 set 
+        		chatbot_id = #{chatbotId}
+    	   where co_code = #{coCode}
+	</update>
+	
+
+
+</mapper>

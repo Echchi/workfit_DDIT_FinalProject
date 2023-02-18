@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sqlmap.realAdminpage.statistics_SQL">
+
+	<select id="getPieData" parameterType="String" resultType="map">
+		select MEM_JOB_GRADE as grade,
+				to_char(count(MEM_JOB_GRADE)) as num 
+		from member
+		where USAGE_STATUS = '0' 
+			and CO_CODE = #{memCo}
+		group by MEM_JOB_GRADE
+	</select>
+
+</mapper>

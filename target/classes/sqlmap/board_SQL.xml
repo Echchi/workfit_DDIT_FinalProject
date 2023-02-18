@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.workFit.mapper.board.BoardMapper">
+
+	<sql id="postSearch">
+		<if test="searchType != null and searchType == 'title'">
+			and (post_title like '%'||#{searchWord}||'%')
+		</if>
+		<if test="searchType != null and searchType == 'writer'">
+			and (mem_id like '%'||#{searchWord}||'%')
+		</if>
+	</sql>
+	
+	<resultMap type="postVO" id="postMap">
+		<id property="postCode" column="post_code" />
+		<result property="postCode" column="post_code" />
+		<result property="boardCode" column="board_code" />
+		<result property="memId" column="mem_id" />
+		<result property="postTitle" column="post_title" />
+		<result property="postContent" column="post_content" />
+		<result property="postHit" column="post_hit" />
+		<result property="postDate" column="post_date" />
+		<result property="postModDate" column="post_mod_date" />
+		<result property="postPopup" column="post_popup" />
+		<result property="memName" column="mem_name" />
+		<collection property="boardAttachs" resultMap="postFileMap" />
+	</resultMap>
+
+	<resultMap type="boardAttachVO" id="postFileMap">
+		<id property="boardAttachCode" column="board_attach_code" />
+		<result property="boardAttachCode" column="board_attach_code" />
+		<result property="postCode" column="post_code" />
+		<result property="boardAttachName" column="board_attach_name" />
+		<result property="boardAttachNewname" column="board_attach_newname" />
+		<result property="boardAttachPath" column="board_attach_path" />
+		<result property="boardAttachType" column="board_attach_type" />
+		<result property="boardAttachDate" column="board_attach_date" />
+		<result property="boardAttachSize" column="board_attach_size" />
+	</resultMap>
+
+	<select id="checkCreatedBoardCode" parameterType="string" resultType="int">
+		
+		select count(*)
+		from board
+		where co_code = #{coCode}
+	</select>
+
+	<insert id="createBoardCodeDefault" parameterType="hashMap">
+		<selectKey keyProperty="boardCode" order="BEFORE" resultType="string">
+			select seq_board.nextval from dual
+		</selectKey>
+		insert into board(BOARD_CODE, BOARD_TYPE, CO_CODE)
+		values ('bc'||LPAD(#{boardCode},3,'0'),#{boardType},#{coCode})
+	</insert>
+
+	<select id="getBoardCode" parameterType="hashMap" resultType="string">
+		select BOARD_CODE
+		from board
+		where
+		co_code = #{coCode}
+		and board_type = #{boardType}
+	</select>
+
+	<select id="selectListPost" parameterType="hashmap" resultType="postVO">
+
+<!-- 		select POST_CODE, BOARD_CODE, MEM_ID, POST_TITLE, POST_CONTENT, POST_HIT, POST_DATE, POST_MOD_DATE, POST_POPUP -->
+<!-- 		from POST -->
+<!-- 		where board_code = (select BOARD_CODE from board -->
+		
+		select POST_CODE, BOARD_CODE, a.MEM_ID, POST_TITLE, POST_CONTENT, POST_HIT, POST_DATE, POST_MOD_DATE, POST_POPUP,
+		(select mem_name from member b where b.mem_id= a.mem_id) mem_name 
+		from POST a
+		where board_code = 
+				(select BOARD_CODE 
+				 from board
+				 where co_code = #{coCode}
+				 and board_type = #{boardType})
+		<include refid="postSearch"></include>
+		order by 7 desc
+	</select>
+
+	<select id="detail" parameterType="string" resultMap="postMap">
+		select
+		B.POST_CODE, B.BOARD_CODE, B.MEM_ID, B.POST_TITLE,
+		B.POST_CONTENT, B.POST_HIT, B.POST_DATE, B.POST_MOD_DATE,
+		B.POST_POPUP,
+		(select mem_name from member c where c.mem_id= b.mem_id) mem_name,
+		A.BOARD_ATTACH_CODE, A.POST_CODE, A.BOARD_ATTACH_NAME,
+		A.BOARD_ATTACH_NEWNAME, A.BOARD_ATTACH_PATH, A.BOARD_ATTACH_TYPE,
+		A.BOARD_ATTACH_DATE, A.BOARD_ATTACH_SIZE
+		from BOARD_ATTACH A
+		RIGHT OUTER JOIN POST B
+		ON (A.POST_CODE = B.POST_CODE)
+		where B.POST_CODE = #{postCode}
+	</select>
+
+	<!-- <select id="detail" parameterType="string" resultType="postVO"> -->
+
+	<!-- select POST_CODE, BOARD_CODE, MEM_ID, POST_TITLE, POST_CONTENT, POST_HIT, 
+		POST_DATE, POST_MOD_DATE, POST_POPUP -->
+
+	<!-- from POST -->
+
+	<!-- where POST_CODE = #{postCode} -->
+
+	<!-- </select> -->
+
+	<select id="getFile" parameterType="string" resultType="boardAttachVO">
+		select * from board_Attach
+		where BOARD_ATTACH_CODE = #{baId}
+	</select>
+
+	<update id="modiPost" parameterType="postVO">
+		update post
+		<set>
+			<if test="postTitle != null and postTitle != postTitle">
+				post_title = #{postTitle},
+			</if>
+			<if test="postContent != null and postContent != postContent">
+				post_content = #{postContent},
+			</if>
+			post_mod_date = sysdate,
+			<if test="postPopup != null and postPopup != postPopup">
+				post_popup = #{postPopup},
+			</if>
+			<!-- <if test="postContent != null and postContent != postContent"> -->
+			<!-- </if> -->
+		</set>
+		where
+		post_code = #{postCode}
+	</update>
+
+	<delete id="deletePost" parameterType="string">
+		delete from post
+		where
+		post_code = #{postCode}
+	</delete>
+
+	<insert id="insertPost" parameterType="postVO" useGeneratedKeys="true">
+		<selectKey keyProperty="postCode" order="BEFORE" resultType="string">
+			select LPAD(SEQ_POST.nextval,3,'0') from dual
+		</selectKey>
+
+		INSERT INTO post(POST_CODE, BOARD_CODE, MEM_ID, POST_TITLE,
+						 POST_CONTENT, POST_HIT, POST_DATE, POST_MOD_DATE, POST_POPUP)
+		values
+		('pc'||#{postCode},#{boardCode},#{memId},#{postTitle},#{postContent},0,sysdate,sysdate,#{postPopup})
+
+	</insert>
+
+	<insert id="insertPostFile" parameterType="boardAttachVO">
+		<selectKey keyProperty="boardAttachCode" order="BEFORE" resultType="string">
+			SELECT LPAD(SEQ_BOARD_ATTACH.nextval,3,'0') FROM dual
+		</selectKey>
+
+		INSERT INTO BOARD_ATTACH
+		(BOARD_ATTACH_CODE, POST_CODE,BOARD_ATTACH_NAME, BOARD_ATTACH_NEWNAME,
+		 BOARD_ATTACH_PATH,	BOARD_ATTACH_TYPE, BOARD_ATTACH_DATE, BOARD_ATTACH_SIZE)
+
+		values 
+		('ba'||#{boardAttachCode}, 'pc'||#{postCode}, #{boardAttachName},
+		#{boardAttachNewname}, #{boardAttachPath}, #{boardAttachType}, sysdate, #{boardAttachSize})
+
+	</insert>
+
+	<select id="getBoardAttachCode" resultType="string">
+		select LPAD(SEQ_BOARD_ATTACH.currval,3,'0') FROM dual
+	</select>
+
+	<select id="selectListBoardAttach" parameterType="string" resultType="boardAttachVO">
+		select
+			BOARD_ATTACH_CODE, POST_CODE, BOARD_ATTACH_NAME, BOARD_ATTACH_NEWNAME,
+			BOARD_ATTACH_PATH, BOARD_ATTACH_TYPE, BOARD_ATTACH_DATE,
+			BOARD_ATTACH_SIZE
+		from BOARD_ATTACH
+		where post_code = #{postCode}
+	</select>
+
+	<select id="countBoardAttach" parameterType="string" resultType="int">
+		select count(*)
+		from board_attach
+		where post_code = #{postCode}
+	</select>
+
+	<update id="hitUp" parameterType="string">
+		update post
+		set
+		POST_HIT = POST_HIT +1
+		where
+		POST_CODE = #{postCode}
+	</update>
+	
+	<!-- Popup selectOne -->
+	<select id="selectListPostPopup" resultMap="postMap">
+		select B.POST_TITLE , B.POST_CODE, B.POST_POPUP, A.BOARD_ATTACH_CODE, A.POST_CODE,
+		A.BOARD_ATTACH_NAME, A.BOARD_ATTACH_NEWNAME, A.BOARD_ATTACH_PATH,
+		A.BOARD_ATTACH_TYPE, A.BOARD_ATTACH_DATE, A.BOARD_ATTACH_SIZE
+		from POST B left outer JOIN BOARD_ATTACH A ON (A.POST_CODE = B.POST_CODE)
+		where
+		b.post_popup = 'y'
+		order by 1
+	</select>
+	
+	<update id="popUpValidateOne" parameterType="hashmap">
+		update post
+          set 
+            post_popup = 'n'
+          
+          where post_code = (
+          select POST_CODE
+          from POST a where board_code = (select BOARD_CODE 
+          									from board 
+          								   where co_code = #{coCode} 
+          								     and board_type = #{boardType}) 
+          			    and post_popup = 'y')
+	</update>
+	
+	
+	<!-- For Deleting Attachs File from DB -->
+	<delete id="delBoardAttach" parameterType="boardAttachVO">
+		delete from board_attach
+		where
+		board_attach_code = #{boardAttachCode}
+	</delete>
+
+	<delete id="delAllBoardAttach" parameterType="string">
+		delete from board_attach
+		where
+		post_code = #{postCode}
+	</delete>
+	
+	<!-- =============================================================== -->
+	<!-- ======================     Test     =========================== -->
+	<!-- =============================================================== -->
+	
+	<!-- POPUP LIST -->
+	<!-- <select id="selectListPostPopup" parameterType="string" resultMap="postMap"> -->
+	<!-- select B.POST_CODE, B.POST_POPUP, A.BOARD_ATTACH_CODE, A.POST_CODE, -->
+	<!-- A.BOARD_ATTACH_NAME, A.BOARD_ATTACH_NEWNAME, A.BOARD_ATTACH_PATH, -->
+	<!-- A.BOARD_ATTACH_TYPE, A.BOARD_ATTACH_DATE, A.BOARD_ATTACH_SIZE -->
+	<!-- from POST B left outer JOIN BOARD_ATTACH A ON (A.POST_CODE = B.POST_CODE) -->
+	<!-- where -->
+	<!-- b.post_popup = 'y' -->
+	<!-- and -->
+	<!-- b.post_code = #{postCode} -->
+	<!-- order by 1 -->
+	<!-- </select> -->
+	
+
+</mapper>

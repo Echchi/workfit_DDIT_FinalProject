@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.main.MainMapper">
+	<select id="loginCheck" parameterType="hashmap" resultType="memberVO">
+		select * from member 
+		 where mem_id = #{memId} and mem_pass = #{memPass}
+	</select>
+	
+	<select id="getDeptName" parameterType="String" resultType="String">
+		select a.dept_name 
+		  from dept a 
+		  inner join member b
+		      on a.dept_code = b.dept_fk
+		  where b.mem_id = #{memId}    
+	</select>
+	
+	<!--  시큐리티 인증 쿼리문 -->
+	<resultMap type="memberVO" id="memDetailMap">
+		<result property="memId" column="MEM_ID"/>
+		<result property="memPass" column="MEM_PASS"/>
+		<result property="memName" column="MEM_NAME"/>
+		<result property="deptFk" column="DEPT_FK"/>
+		<result property="memProfileUrl" column="MEM_PROFILE_URL"/>
+		<result property="deptFk" column="DEPT_FK"/>
+		<result property="coCode" column="CO_CODE"/>
+		<result property="enabled" column="ENABLED"/>
+		<result property="deptName" column="DEPT_NAME"/>
+		<result property="memJobGrade" column="MEM_JOB_GRADE"/>
+		<result property="memEmail" column="MEM_EMAIL"/>
+		<result property="memApproveStatus" column="MEM_APPROVE_STATUS"/>
+		<!--  여러개의 권한 -->
+		<collection property="memAuthVOList" resultMap="memAuthMap" />
+	</resultMap>
+	
+	<resultMap type="memAuthVO" id="memAuthMap">
+		<result property="memId" column="MEM_ID"/>
+		<result property="memAuth" column="MEM_AUTH"/>
+	</resultMap>
+	<!-- 로그인을 위한 조인 쿼리 -->
+	<select id="securityLogin" parameterType="String" resultMap="memDetailMap">
+    	SELECT A.*, B.MEM_AUTH, C.DEPT_NAME 
+		  FROM   member A, MEM_AUTH B, dept C
+		 WHERE  A.MEM_ID = B.MEM_ID
+	       AND  A.DEPT_FK = C.DEPT_CODE
+		   AND  A.MEM_ID = #{username}
+	</select>
+	
+	
+	<select id="getMemberShipInfo" parameterType="string" resultType="string">
+		select co_buy_service from co where co_code = #{memCo}
+	</select>
+	
+
+</mapper>

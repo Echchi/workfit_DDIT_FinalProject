@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+"http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+
+<!-- Tiles 설정 -->
+<tiles-definitions>
+	
+	<!-- mainTemplate 설정 -->
+	<definition name="mainTemplate" template="/WEB-INF/views/mainTemplate.jsp">
+		<put-attribute name="header" value="/WEB-INF/views/tiles/header.jsp"/>
+		<put-attribute name="leftNav" value="/WEB-INF/views/tiles/leftNav.jsp"/>
+		<put-attribute name="content" value=""/>
+		<put-attribute name="footer" value="/WEB-INF/views/tiles/footer.jsp"/>
+	</definition>
+	
+	<definition name="workfit/*/*" extends="mainTemplate">
+		<put-attribute name="content" value="/WEB-INF/views/workfit/{1}/{2}.jsp"/>
+	</definition>
+	
+	
+	<!-- tiles 제외 시킨다 -->
+	<definition name="empty" template="/WEB-INF/views/empty.jsp">
+   		<put-attribute name="content" value=""/>
+   </definition>
+
+   <definition name="*/*.empty" extends="empty">
+   		<put-attribute name="content" value="/WEB-INF/views/workfit/{1}/{2}.jsp"/>
+   </definition>
+   
+	
+
+   <!-- secTemplate 설정 -->
+   <!-- /security/login -->
+<!--    <definition name="secTemplate" template="/WEB-INF/views/mainTemplate.jsp"> -->
+<!--       <put-attribute name="header" value="/WEB-INF/views/tiles/header.jsp"/> -->
+<!--       <put-attribute name="footer" value="/WEB-INF/views/tiles/footer.jsp"/> -->
+<!--    </definition> -->
+<!--    <definition name="security/*" extends="secTemplate"> -->
+<!--    		return "security/loginForm"; -->
+<!--       <put-attribute name="content" value="/WEB-INF/views/security/{1}.jsp"/> -->
+<!--    </definition> -->
+   
+   <!-- secSubTemplate 설정 -->
+   <!-- /security/notice/register -->
+<!--    <definition name="secSubTemplate" template="/WEB-INF/views/mainTemplate.jsp"> -->
+<!--       <put-attribute name="header" value="/WEB-INF/views/tiles/header.jsp"/> -->
+<!--       <put-attribute name="footer" value="/WEB-INF/views/tiles/footer.jsp"/> -->
+<!--    </definition> -->
+<!--    <definition name="security/*/*" extends="secSubTemplate"> -->
+<!--       return "security/notice/register"; -->
+<!--       <put-attribute name="content" value="/WEB-INF/views/security/{1}/{2}.jsp"/> -->
+<!--    </definition> -->
+   
+	
+	
+</tiles-definitions>

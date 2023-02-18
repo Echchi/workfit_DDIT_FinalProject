@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.additional.DashboardMapper">
+		
+	<resultMap type="dashBoardVO" id="dashboardMap">
+		<result property="dashListCode" column="DASH_LIST_CODE"/>
+		<result property="dashSeq" column="DASH_SEQ"/>
+		<association property="dashBoardListVO" column="DASH_LIST_CODE" select="dashBoardDetail"/>
+	</resultMap>
+		
+	<select id="getMyDashboardList" parameterType="String" resultMap="dashboardMap">
+		select * from DASHBOARD where mem_id = #{memId} order by dash_seq asc
+	</select>
+		
+	<select id="dashBoardDetail" resultType="dashBoardListVO" >
+		select * from dashboard_list where DASH_LIST_CODE = #{DASH_LIST_CODE}
+	</select>
+	
+	<select id="getDashboardItemImage" parameterType="String" resultType="dashBoardListVO">
+		select * from dashboard_list 
+		 where dash_list_code not in 
+		    (
+		        select dash_list_code 
+		         from dashboard 
+		        where mem_id = #{memId}
+		    )
+	</select>
+	
+	<update id="insertDashboardMain2DB" parameterType="list">
+		<foreach collection="list" item="item" index="index" separator=";" open="DECLARE BEGIN" close="; END;">
+		
+			MERGE INTO
+				dashboard a
+				USING DUAL
+					ON (
+						a.dash_list_code = #{item.dashListCode}  <!-- 추가될 대시리스트코드 -->
+						and a.mem_id = #{item.memId}  <!-- 추가하는 아이디 -->
+						)
+			WHEN MATCHED THEN
+					UPDATE SET a.dash_seq = #{item.dashSeq}  <!-- 업데이트 될 대시리스트 순서 -->
+			WHEN NOT MATCHED THEN
+					INSERT
+						VALUES (
+								'D'||SEQ_DASHBOARD.nextval,
+								#{item.dashListCode},
+								#{item.memId},
+								#{item.dashSeq} <!-- 추가될 대시리스트 순서 -->
+								)
+		</foreach>							
+	</update>
+	
+	<delete id="deleteDashboardMain2DB" parameterType="map">
+		delete dashboard where DASH_LIST_CODE not in
+			<foreach collection="widgetList" item="item" separator="," open="(" close=")">
+				#{item}
+			</foreach>
+		 and mem_id = #{memId} 
+	</delete>
+	
+	<!-- 부서 출퇴근 용 ~~ -->
+	<select id="getMemStatus" parameterType="string" resultType="map">
+		select a.MEM_NAME, a.MEM_PROFILE_URL, a.MEM_ID, a.MEM_JOB_GRADE, b.WORK_DATE, b.WORK_START, b.WORK_END 
+		from
+			(select * 
+			from member 
+			where dept_fk = #{deptCode}) a 
+		left join 
+			(select *  from work
+			where work_date like '%'||sysdate||'%') b
+		on a.MEM_ID = b.MEM_ID
+	</select>
+	
+</mapper>

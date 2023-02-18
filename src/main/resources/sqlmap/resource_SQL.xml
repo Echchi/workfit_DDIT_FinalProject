@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.ResourceMapper">
+
+	<sql id="codeSearch">
+		<if test="code != null and code != ''">
+			<![CDATA[
+			AND A.RESOURCE_CODE LIKE #{code} || '%'
+			]]>
+		</if>
+	</sql>
+	<sql id="typeSearch">
+		<if test="type != null and type != ''">
+			<![CDATA[
+			AND A.RESOURCE_CODE LIKE '%' || UPPER(#{type}) || '%'
+			]]>
+		</if>
+	</sql>
+	<sql id="typeStringSearch">
+		<if test="type != null and type != '' and  type !='all'">
+			<![CDATA[
+			AND A.RESOURCE_TYPE = #{type}
+			]]>
+		</if>
+	</sql>
+	
+	<resultMap type="resourceVO" id="resourceMap">
+		<result property="resourceCode" column="RESOURCE_CODE"/>
+		<result property="resourceType" column="RESOURCE_TYPE"/>
+		<result property="resourcePrice" column="RESOURCE_PRICE"/>
+		<result property="resourceDate" column="RESOURCE_DATE"/>
+		<result property="resourcePlace" column="RESOURCE_PLACE"/>
+		<result property="resourceName" column="RESOURCE_NAME"/>
+		<result property="resourceCoFk" column="RESOURCE_CO_FK"/>
+		<result property="resourceInfo" column="RESOURCE_INFO"/>
+		<result property="resourceImg" column="RESOURCE_IMG"/>
+		<collection property="fixtures" resultMap="fixtureMap"/>
+	</resultMap>
+	<resultMap type="fixtureVO" id="fixtureMap">
+		<result property="fixtureCode" column="FIXTURE_CODE"/>
+		<result property="resourceCode" column="RESOURCE_CODE"/>
+		<result property="fixtureName" column="FIXTURE_NAME"/>
+		<result property="fixtureQuantity" column="FIXTURE_QUANTITY"/>
+	</resultMap>
+	
+	<!--  회사별 모든 자원과 비품들 가져오는 쿼리문 -->
+	<select id="getAllResources" resultMap="resourceMap" parameterType="hashmap">
+		SELECT A.* , B.* FROM "RESOURCE" A, FIXTURE B 
+		 WHERE RESOURCE_CO_FK = #{coCode}
+		<include refid="codeSearch"/>
+		<include refid="typeSearch"/>
+		 AND A.RESOURCE_CODE = B.RESOURCE_CODE(+)
+	</select>
+	
+	<!--  회사별 (자원코드 앞자리 기준으로) 자원 타입명을 가져오는 쿼리문 -->
+	<select id="getResourceType" resultType="string" parameterType="hashmap">
+		select A.RESOURCE_TYPE from "RESOURCE" A where A.resource_co_fk = #{coCode}
+		<include refid="codeSearch"/>
+		GROUP BY A.resource_type
+	</select>
+	
+	<!--  회사별 단일 자원, 비품 가져오는 쿼리문 -->
+	<select id="getOneResource" parameterType="string" resultMap="resourceMap">
+		select A.*, B.* FROM "RESOURCE" A, FIXTURE B
+		WHERE A.RESOURCE_CODE = #{resourceCode}
+		AND A.RESOURCE_CODE = B.RESOURCE_CODE(+)
+	</select>
+	
+	<!--  회사별 자원 타입별로 자원들 가져오는 쿼리문 -->
+	<select id="getTypeList" parameterType="hashmap" resultMap="resourceMap">
+		select A.*, B.* FROM "RESOURCE" A, FIXTURE B
+		WHERE 1=1
+		<include refid="codeSearch"/>
+		<include refid="typeStringSearch"/>
+		AND A.RESOURCE_CO_FK = #{coCode}
+		AND A.RESOURCE_CODE = B.RESOURCE_CODE(+)
+	</select>
+	
+	<!-- 자원 추가하는 쿼리문 -->
+	<!-- 
+			오라클에서 foreach를 이용해 list값을 db에 집어 넣는 방법이다.
+			separator : 반복 문자열을 구분할 문자
+			item : 리스트 i번째의 값이다. item.변수명 으로 사용한다.
+			collection : 타입
+			open : foreach 문이 시작되기 전 추가될 문자
+			close : foreach 문이 끝날 때 추가될 문자
+	 -->
+	<insert id="insertAttach" parameterType="resourceVO">
+		INSERT ALL INTO RESOURCE (
+			RESOURCE_CODE, 
+			RESOURCE_TYPE, 
+			RESOURCE_PRICE, 
+			RESOURCE_DATE, 
+			RESOURCE_PLACE, 
+			RESOURCE_NAME, 
+			RESOURCE_CO_FK, 
+			RESOURCE_INFO, 
+			RESOURCE_IMG
+		)VALUES(
+			'R' || SEQ_RESOURCE.NEXTVAL, 
+			#{resourceType}, 
+			#{resourceDate},
+			#{resourcePlace},
+			#{resourceName},
+			#{resourceCoFk},
+			#{resourceInfo},
+			#{resourceImg},
+		)
+		<foreach item="item" index="index" collection="java.util.List" separator=" " open=" " close="SELECT * FROM DUAL">
+			INTO FIXTURE(FIXTURE_CODE,RESOURCE_CODE,FIXTURE_NAME, FIXTURE_QUANTITY)
+			VALUES ('R' || SEQ_FIXTURE.NEXTVAL,'R' || SEQ_RESOURCE.CURRVAL, #{item.fixtureName}, #{item.fixtureQuantity})
+		</foreach>
+	</insert>
+	
+	<!--  아이디 비번 2차 인증하는 쿼리문 -->
+	<select id="secondPwCheck" parameterType="hashmap" resultType="int">
+		select COUNT(*) from member 
+		where mem_id = #{memId} 
+		  and mem_secpass = #{memSecpass}
+	</select> 
+	
+	<!-- 자원 예약하는 쿼리문 -->
+	<insert id="insertNewEvent" parameterType="hashmap">
+		INSERT INTO RESERVATION
+			(RESERVATION_CODE,
+				RESOURCE_CODE,
+				RESERVATION_STARTTIME,
+				MEM_ID,
+				RESERVATION_MEM,
+				RESERVATION_ENDTIME,
+				RESERVATION_WHY)
+			VALUES(
+				SEQ_RESERVATION.NEXTVAL,
+				#{resourceCode},
+				TO_DATE(#{reservationStarttime}, 'yyyy/mm/dd hh24:mi:ss'),
+				#{memId},
+				#{reservationMem},
+				TO_DATE(#{reservationEndtime}, 'yyyy/mm/dd hh24:mi:ss'),
+				#{reservationWhy}
+			)
+		<selectKey keyProperty="reservationCode" resultType="string" order="AFTER">
+			SELECT SEQ_RESERVATION.CURRVAL FROM DUAL
+		</selectKey>
+	</insert>
+	
+	<!-- 캘린더에 출력할 해당 자원들 예약 정보 출력하는 쿼리문 -->
+	<select id="getReservations" parameterType="hashmap" resultType="reservationVO">
+		select * from reservation where resource_code = #{resourceCode}
+	</select>
+	
+	<!--  캘린더 이동시 수정하는 쿼리문 -->
+	<update id="eventModify" parameterType="reservationVO">
+		UPDATE RESERVATION
+		SET 
+			RESERVATION_STARTTIME = #{reservationStarttime}, 
+			RESERVATION_ENDTIME = #{reservationEndtime} 
+		WHERE RESERVATION_CODE = #{reservationCode}
+	</update>
+	
+	<!-- 캘린더 선택시 삭제하는 쿼리문 -->
+	<delete id="eventDelete" parameterType="string">
+		DELETE RESERVATION
+			WHERE RESERVATION_CODE = #{code}
+	</delete>
+</mapper>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="3.1" xmlns="http://java.sun.com/xml/ns/javaee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee https://java.sun.com/xml/ns/javaee/web-app_3_1.xsd">
+
+	<!-- The definition of the Root Spring Container shared by all Servlets and Filters -->
+	
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<!-- classpath : src/main/java resources src/test/java resources 이 네곳이 
+			classpath임!!!! -->
+		<param-value>classpath:config/spring/root-context.xml</param-value>
+	</context-param>
+	
+	
+	<!-- Creates the Spring Container shared by all Servlets and Filters -->
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+   <!-- 만든 리스너 등록, 리스너를 등록하면 해당 이벤트가 발생하면 리스너에게 알려 줌! -->
+	<listener>
+		<listener-class>kr.or.workFit.controller.commons.Listener</listener-class>
+	</listener>
+	
+	
+	<servlet>
+		<servlet-name>appServlet</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>classpath:config/spring/servlet-context.xml</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+		<!--  multpart-config 는 서블릿 안에 !! -->
+		<multipart-config>
+<!-- 	       	<location>c:\\upload</location>      업로드 되는 파일을 저장할 공간, 위치 -->
+	       	<max-file-size>1006632960</max-file-size>   <!-- 업로드 파일의 최대 크기 1MB, * 20 :: 20971520 -->
+	       	<max-request-size>1006632960</max-request-size>  <!-- 한번에 올릴 수 잇는 최대 크기 40MB ::41943040 ,,251658240-->
+	       	<file-size-threshold>20971520</file-size-threshold>
+	     <!-- 
+	       	  메모리 사용 크기 20MB
+	          - 업로드 하는 파일이 임시로 파일로 저장되지 않고 메모리에서 바로 스트림으로 전달되는 크기의 한계
+	     -->
+	    </multipart-config>
+	    <async-supported>true</async-supported>
+	</servlet>
+	
+	<!-- 
+       web.xml의 설정은 WAS(Tomcat) 자체 설정을 진행
+       multipart-config : 메모리사이즈, 업로드 파일 저장 위치, 최대 크기 설정
+        
+         아래에 설정한 내용을 가지고 @MultipartConfig 어노테이션을 활용한면 아래에서 설정한
+         셋팅값들로 파일 업로드를 진행 할 수 있다.
+      -->
+
+	<servlet-mapping>
+		<servlet-name>appServlet</servlet-name>
+		<url-pattern>/</url-pattern>
+	</servlet-mapping>
+	
+	
+	<!-- 
+		한글 처리를 위한 UTF-8 필터 등록
+		JSP나 서블릿 처리할때마다 넘겨받은 request를 setCharacterEncoding으로 UTF-8 설정했던 사항을 필터로 대체함(스프링이 해줌)
+	 -->
+	<filter>
+		<filter-name>encodingFilter</filter-name>
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		<async-supported>true</async-supported>
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>encodingFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+        <dispatcher>ASYNC</dispatcher>
+	</filter-mapping>
+	
+	
+	<!-- MultipartFilter 적용 -->
+	<filter>
+		<filter-name>MultipartFilter</filter-name>
+		<filter-class>org.springframework.web.multipart.support.MultipartFilter</filter-class>
+		<async-supported>true</async-supported>
+	</filter>
+	<filter-mapping>
+		<filter-name>MultipartFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+        <dispatcher>ASYNC</dispatcher>
+	</filter-mapping>
+	
+	<!-- 시큐리티 Filter 적용 --> 
+	<filter>
+		<filter-name>springSecurityFilterChain</filter-name>
+		<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+		<async-supported>true</async-supported>
+	</filter>
+	<filter-mapping>
+		<filter-name>springSecurityFilterChain</filter-name>
+		<url-pattern>/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+        <dispatcher>ASYNC</dispatcher>
+	</filter-mapping>
+	
+	
+
+</web-app>

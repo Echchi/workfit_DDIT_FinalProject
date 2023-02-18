@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.adminpage.adminCommuteMapper">
+
+<select id="getLv3Data" resultType="kr.or.workFit.vo.admincommutehelper.AdminCommuteVO">
+	SELECT DEPT_NAME, MEM_JOB_GRADE, MEM_NAME, WORK_DATE, WORK_START, WORK_END, WORK_TIME, LATE_STATUS FROM
+(SELECT B.WORK_DATE, C.MEM_NAME, D.DEPT_NAME, C.MEM_JOB_GRADE, B.WORK_START, B.WORK_END, B.WORK_TIME, B.LATE_STATUS, D.DEPT_CODE FROM  
+    WORK B, MEMBER C, DEPT D 
+WHERE B.MEM_ID = C.MEM_ID
+AND C.DEPT_FK = D.DEPT_CODE) E
+</select>
+
+<select id="getLv2TodayData" resultType="kr.or.workFit.vo.admincommutehelper.AdminCommuteVO" parameterType="String">
+	SELECT * FROM
+(SELECT D.DEPT_NAME,C.MEM_JOB_GRADE,C.MEM_NAME,B.WORK_DATE,B.WORK_START, B.WORK_END, B.WORK_TIME, B.LATE_STATUS  FROM  
+    WORK B, (SELECT MEM_ID,MEM_JOB_GRADE,DEPT_FK,MEM_NAME FROM MEMBER
+WHERE DEPT_FK = #{deptFK}) C, DEPT D 
+WHERE B.MEM_ID = C.MEM_ID
+AND C.DEPT_FK = D.DEPT_CODE) E
+WHERE TO_DATE(E.WORK_DATE) BETWEEN '2022/12/01' AND SYSDATE
+<!-- WHERE TO_CHAR(E.WORK_DATE) = TO_CHAR(SYSDATE-1) -->
+</select>
+
+
+
+<select id="getAvgWorkTime" parameterType="kr.or.workFit.vo.myworkhelper.DayInfo" resultType="kr.or.workFit.vo.admincommutehelper.AdminCommuteVO">
+	SELECT DEPT_NAME, ROUND(AVG(WORK_TIME),0) AS AVG_WORK_TIME FROM
+(SELECT D.DEPT_CODE, D.DEPT_NAME, C.MEM_JOB_GRADE, C.MEM_NAME, B.WORK_DATE, B.WORK_START, B.WORK_END, B.WORK_TIME ,B.LATE_STATUS, ROUND((SYSDATE-C.MEM_WORK_START_DAY),0) AS WORK_HISTORY FROM  
+    WORK B, MEMBER C, DEPT D 
+WHERE B.MEM_ID = C.MEM_ID
+AND C.DEPT_FK = D.DEPT_CODE
+AND EXTRACT(MONTH FROM TO_DATE(B.WORK_DATE)) = #{month}
+AND EXTRACT(YEAR FROM TO_DATE(B.WORK_DATE)) = #{year}) E
+GROUP BY DEPT_NAME
+</select>
+
+<select id="getAvgWorkHistory" parameterType="kr.or.workFit.vo.myworkhelper.DayInfo" resultType="kr.or.workFit.vo.admincommutehelper.AdminCommuteVO">
+<![CDATA[
+SELECT B.DEPT_NAME, CASE
+  WHEN ROUND(A.WORK_HISTORY/365,2) < 0 THEN 0 
+  ELSE ROUND(A.WORK_HISTORY/365,2) END
+  AS AVG_WORK_HISTORY 
+FROM
+(SELECT DEPT_FK, AVG(ROUND((TO_DATE(LAST_DAY(TO_DATE(#{year}||'/'||#{month}||'/'||'01')))-MEM_WORK_START_DAY),0)) AS WORK_HISTORY
+FROM MEMBER
+GROUP BY DEPT_FK) A, DEPT B
+WHERE A.DEPT_FK = B.DEPT_CODE
+]]>
+</select>
+
+<select id="getAlldept" resultType="deptVO">
+	SELECT DEPT_NAME FROM DEPT
+</select>
+
+</mapper>

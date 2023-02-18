@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.mypage.MypageMapper">
+
+	<select id="selectMem" parameterType="string" resultType="memberVO">
+		select * from member where mem_id = #{memId}
+	</select>
+	
+	<update id="memberModify" parameterType="memberVO">
+		update member set 
+			mem_name = #{memName},
+			mem_en_name = #{memEnName},
+			mem_tel = #{memTel},
+			mem_email = #{memEmail},
+			mem_intro = #{memIntro},
+			mem_profile_url = #{memProfileUrl},
+			mem_zipcode = #{memZipcode},
+			mem_addr = #{memAddr},
+			mem_addr_detail = #{memAddrDetail}
+			where mem_id = #{memId}  
+	</update>
+</mapper>

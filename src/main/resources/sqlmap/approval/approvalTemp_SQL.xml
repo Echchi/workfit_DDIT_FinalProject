@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sqlmap.approval.approvalTemp_SQL">
+
+	<sql id="startSerach">
+		<if test="startDate != null and endDate != ''">
+			<![CDATA[
+			and TO_CHAR(APPROVAL_DATE,'YYYYMMDD') >= TO_CHAR(TO_DATE(#{startDate},'YYYY-MM-DD'),'YYYYMMDD')
+			]]>
+		</if>
+	</sql>
+
+	<sql id="endSerach">
+		<if test="endDate != null and endDate != ''">
+			<![CDATA[
+			and TO_CHAR(APPROVAL_DATE,'YYYYMMDD') <=  TO_CHAR(TO_DATE(#{endDate},'YYYY-MM-DD'),'YYYYMMDD')
+			]]>
+		</if>
+	</sql>
+	
+	<!-- 임시저장 문서 리스트 select -->
+	<select id="selectTempList" parameterType="approvalVO" resultType="approvalDocVO">
+		select a.APPROVAL_DOC_CODE,
+			   a.APPROVAL_TYPE, 
+			   a.APPROVAL_DOC_TITLE, 
+			   b.APPROVAL_DATE
+	    from approval_doc a left outer join approval b
+	    	on a.approval_doc_code = b.approval_doc_code
+	    where b.mem_id = #{memId} 
+	    		and b.approval_flag = '1' 
+	    		and a.APPROVAL_SAVECHECK = '1'
+	    order by b.APPROVAL_DATE desc
+	</select>
+	
+	<!-- 임시저장 문서에 속해있는 작성자 -->
+	<select id="selectApprovalData" parameterType="approvalVO" resultType="approvalVO">
+		select * from approval
+		where approval_doc_code = #{approvalDocCode} 
+		and mem_id = #{memId} 
+		and approval_flag = '1'
+	</select>
+
+	<!-- 문서코드로 결재문서 데이터 select -->
+	<select id="selectDetail" parameterType="String" resultType="approvalDocVO">
+		select * from approval_doc
+		where approval_doc_code = #{approvalDocCode} 
+	</select>
+	
+	<!-- 문서코드로 결재라인 select -->
+	<select id="selectAppLineList" parameterType="String" resultType="approvalVO">
+		select * from approval
+		where approval_doc_code = #{approvalDocCode}
+		order by APPROVAL_FLAG asc
+	</select>
+	
+	<!-- 문서코드로 결재첨부파일 selectList -->
+	<select id="selectAttachList" parameterType="String" resultType="approvalAttachVO">
+		select * from approval_attach
+		where approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<!-- 문서코드로 결재참조 select -->
+	<select id="selectReferenceList" parameterType="String" resultType="approvalReferenceVO">
+		select * from approval_reference
+		where approval_doc_code = #{approvalDocCode}
+	</select>
+	
+	<!-- 멤버 정보 가져오기 -->
+	<select id="getMemINfo" parameterType="String" resultType="memberVO">
+		select * from member
+		where mem_id = #{memId}
+	</select>
+	
+	<!-- 임시저장 결재 첨부파일  select-->
+	<select id="selectAttachInfo" parameterType="String" resultType="approvalAttachVO">
+		select * from approval_attach
+		where APPROVAL_ATTACH_CODE = #{attachCode, jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 임시저장 문서 삭제 -->
+	<delete id="deleteDoc">
+		delete from approval_doc
+		where approval_doc_code = #{delCode, jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 임시저장 첨부파일 삭제 -->
+	<delete id="deleteAttachFromDocCode" parameterType="String">
+		delete from APPROVAL_ATTACH
+		where approval_doc_code = #{delCode, jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 임시저장 첨부파일 삭제 -->
+	<delete id="deleteAttach" parameterType="String">
+		delete from APPROVAL_ATTACH
+		where APPROVAL_ATTACH_CODE = #{attachCode, jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 임시저장 참조자 삭제 -->
+	<delete id="deleteRefer" parameterType="String">
+		delete from approval_reference
+		where approval_doc_code = #{docCode, jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 임시저장 결재라인 삭제 -->
+	<delete id="deleteApprovalLine" parameterType="String">
+		delete from approval
+		where approval_doc_code = #{docCode, jdbcType=VARCHAR}
+	</delete>
+	
+	<!-- 임시저장 문서 상신하기하기 -->
+	<update id="updateApprovalDoc" parameterType="approvalDocVO">
+		update APPROVAL_DOC
+    	set
+    	APPROVAL_TYPE = #{approvalType, jdbcType=VARCHAR}, 
+        APPROVAL_DOC_TITLE = #{approvalDocTitle, jdbcType=VARCHAR}, 
+        APPROVAL_CONTENT =  #{approvalContent, jdbcType=VARCHAR}, 
+        APPROVAL_ACCESS_AUTH = #{approvalAccessAuth, jdbcType=VARCHAR}, 
+        APPROVAL_SCOPE = #{approvalScope, jdbcType=CHAR},
+        APPROVAL_SAVECHECK = '0'
+    	where APPROVAL_DOC_CODE = #{approvalDocCode}
+	</update>
+	
+	<update id="updateAttach" parameterType="approvalAttachVO">
+		update APPROVAL_ATTACH
+		set
+		APPROVAL_ATTACH_SAVEPATH = #{approvalAttachSavepath}
+		where APPROVAL_ATTACH_CODE = #{approvalAttachCode}
+	</update>
+	
+	
+</mapper>

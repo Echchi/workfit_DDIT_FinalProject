@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.workFit.mapper.today.TodayMapper">
+	
+	<select id="select" parameterType="String" resultType="todayVO">
+		select * from today where mem_id = #{memId} order by today_code asc
+	</select>
+	
+	<insert id="insert" parameterType="todayVO">
+			insert into today
+			(
+				TODAY_CODE,
+				MEM_ID,
+				TODAY_CONTENT,
+				TODAY_DATE,
+				TODAY_STATUS,
+				TODAY_CHECK
+			)
+			values(
+				 #{todayCode},
+				 #{memId},
+				 #{todayContent},
+				 sysdate,
+				 0,
+				 0
+			)
+	</insert>
+	
+	<delete id="delete" parameterType="String">
+		delete from today where TODAY_CODE = #{todayCode}
+	</delete>
+	
+	<update id="update" parameterType="map">
+		update today set today_check = #{check} where today_code = #{todayCode}
+		
+	</update>
+	
+	
+</mapper>
